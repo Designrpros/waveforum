@@ -5,9 +5,9 @@ import Head from 'next/head';
 import React, { useState, useCallback, ChangeEvent } from 'react';
 import styled, { useTheme } from 'styled-components';
 import {
-  UploadCloud, Music, Image as ImageIcon, FileText, Award, Percent,
+  UploadCloud, Music, Image as ImageIcon,
   Info, CheckCircle, XCircle, Loader, PlusCircle, Trash2,
-} from 'lucide-react';
+} from 'lucide-react'; // Removed unused imports: FileText, Award, Percent
 
 // --- Reused & Adapted Styled Components for Consistency ---
 const Section = styled.section`
@@ -110,7 +110,7 @@ const Select = styled.select`
   color: ${({ theme }) => theme.text};
   font-size: 1rem;
   appearance: none; /* Remove default arrow */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd'/%3E%3C/svg%3E");
+  background-image: url(&#34;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd'/%3E%3C/svg%3E&#34;);
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   background-size: 1.5em 1.5em;
@@ -301,7 +301,7 @@ const CheckboxOption = styled.label`
     transition: all 0.2s ease;
 
     &::before {
-      content: "✓";
+      content: "&#10003;"; /* Unicode checkmark */
       font-size: 0.8rem;
       color: white;
       transform: scale(0);
@@ -438,15 +438,15 @@ const UploadPage: NextPage = () => {
         if (audio) handleTrackFile(trackId, audio);
       }
     }
-  }, [tracks]); // Add tracks to dependency array
+  }, []); // Removed 'tracks' from dependency array
 
   const handleFileSelect = (e: ChangeEvent<HTMLInputElement>, targetType: 'artwork' | 'track', trackId?: string) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      if (targetType === 'artwork') {
-        handleArtworkFile(files[0]);
-      } else if (targetType === 'track' && trackId) {
+      if (targetType === 'track' && trackId) { // Corrected 'type' to 'targetType' and added trackId check
         handleTrackFile(trackId, files[0]);
+      } else if (targetType === 'artwork') { // Corrected 'type' to 'targetType'
+        handleArtworkFile(files[0]);
       }
     }
   };
@@ -725,7 +725,7 @@ const UploadPage: NextPage = () => {
                   required
                 />
                 <UploadIconWrapper><ImageIcon size={48} /></UploadIconWrapper>
-                <p>Drag & drop your artwork here, or click to browse</p>
+                <p>Drag &amp; drop your artwork here, or click to browse</p>
                 {artworkFile && <p style={{ color: theme.text }}>Selected: {artworkFile.name}</p>}
                 {artworkPreviewUrl && <ArtworkPreview src={artworkPreviewUrl} alt="Artwork Preview" />}
               </FileDropArea>
@@ -765,7 +765,7 @@ const UploadPage: NextPage = () => {
                       required
                     />
                     <UploadIconWrapper><Music size={48} /></UploadIconWrapper>
-                    <p>Drag & drop audio for "{track.title || `Track ${index + 1}`}" here, or click to browse</p>
+                    <p>Drag &amp; drop audio for &#34;{track.title || `Track ${index + 1}`}&#34; here, or click to browse</p>
                     {track.file && <p style={{ color: theme.text }}>Selected: {track.file.name}</p>}
                   </FileDropArea>
                 </FormGroup>

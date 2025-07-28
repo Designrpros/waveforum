@@ -6,8 +6,8 @@ import React from 'react';
 import styled, { useTheme } from 'styled-components';
 import Link from 'next/link';
 import {
-  MessageSquare, Users, Sparkles, BookOpen, Handshake, Megaphone,
-  Mic, Lightbulb, TrendingUp, FolderOpen, FileText, // Added FileText import
+  MessageSquare, Users, BookOpen, Handshake, Megaphone,
+  Mic, Lightbulb, TrendingUp, FolderOpen, FileText, // Removed Sparkles
 } from 'lucide-react';
 
 // --- Reused & Adapted Styled Components for Consistency ---
@@ -284,25 +284,25 @@ const CommunityPage: NextPage = () => {
             </ForumCategoryCard>
             <ForumCategoryCard>
               <ForumIconWrapper><Mic size={24} /></ForumIconWrapper>
-              <CardTitle>Production & Gear</CardTitle>
+              <CardTitle>Production &amp; Gear</CardTitle>
               <CardText>Share tips, ask questions about DAWs, plugins, and recording equipment.</CardText>
               <CardLink href="#">View Forum</CardLink>
             </ForumCategoryCard>
             <ForumCategoryCard>
               <ForumIconWrapper><TrendingUp size={24} /></ForumIconWrapper>
-              <CardTitle>Marketing & Promotion</CardTitle>
+              <CardTitle>Marketing &amp; Promotion</CardTitle>
               <CardText>Strategies for getting your music heard, social media, and building your fanbase.</CardText>
               <CardLink href="#">View Forum</CardLink>
             </ForumCategoryCard>
             <ForumCategoryCard>
               <ForumIconWrapper><FileText size={24} /></ForumIconWrapper>
-              <CardTitle>Licensing & Rights</CardTitle>
+              <CardTitle>Licensing &amp; Rights</CardTitle>
               <CardText>Discuss Creative Commons, copyright, and protecting your intellectual property.</CardText>
               <CardLink href="#">View Forum</CardLink>
             </ForumCategoryCard>
             <ForumCategoryCard>
               <ForumIconWrapper><Lightbulb size={24} /></ForumIconWrapper>
-              <CardTitle>Feedback & Critiques</CardTitle>
+              <CardTitle>Feedback &amp; Critiques</CardTitle>
               <CardText>Get constructive feedback on your tracks from other artists.</CardText>
               <CardLink href="#">View Forum</CardLink>
             </ForumCategoryCard>
@@ -325,7 +325,7 @@ const CommunityPage: NextPage = () => {
             <NewsItem>
               <NewsTitle>New Feature: Royalty Splits Beta!</NewsTitle>
               <NewsDate>July 25, 2025</NewsDate>
-              <CardText>We're excited to announce the beta launch of our new royalty splits feature. You can now easily set up automatic payments to your collaborators directly from your dashboard.</CardText>
+              <CardText>We&apos;re excited to announce the beta launch of our new royalty splits feature. You can now easily set up automatic payments to your collaborators directly from your dashboard.</CardText>
               <CardLink href="#">Read More</CardLink>
             </NewsItem>
             <NewsItem>
@@ -337,7 +337,7 @@ const CommunityPage: NextPage = () => {
             <NewsItem>
               <NewsTitle>WaveForum Hits 10,000 Artists!</NewsTitle>
               <NewsDate>July 15, 2025</NewsDate>
-              <CardText>A huge thank you to our growing community! We're thrilled to see so many independent artists thriving with WaveForum.</CardText>
+              <CardText>A huge thank you to our growing community! We&apos;re thrilled to see so many independent artists thriving with WaveForum.</CardText>
               <CardLink href="#">Read More</CardLink>
             </NewsItem>
           </Grid>
@@ -368,7 +368,7 @@ const CommunityPage: NextPage = () => {
               <ArtistAvatar src="https://placehold.co/80x80/4a90d9/FFFFFF?text=A3" alt="Artist 3" />
               <ArtistName>Luna Sol</ArtistName>
               <ArtistGenre>Folk / Acoustic</ArtistGenre>
-              <CardText>Luna Sol's heartfelt lyrics and captivating acoustic arrangements create an intimate listening experience.</CardText>
+              <CardText>Luna Sol&apos;s heartfelt lyrics and captivating acoustic arrangements create an intimate listening experience.</CardText>
               <CardLink href="#">View Profile</CardLink>
             </ArtistSpotlightCard>
           </Grid>
@@ -416,7 +416,7 @@ const CommunityPage: NextPage = () => {
 
         {/* Resources Section */}
         <Section>
-          <SectionTitle>Resources & Knowledge Base</SectionTitle>
+          <SectionTitle>Resources &amp; Knowledge Base</SectionTitle>
           <SectionSubtitleSmall>
             Access guides, tutorials, and FAQs to help you navigate your music career.
           </SectionSubtitleSmall>
@@ -443,4 +443,4 @@ const CommunityPage: NextPage = () => {
   );
 };
 
-export default CommunityPage;
+export default CommunityPage
