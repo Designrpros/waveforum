@@ -1,12 +1,18 @@
+/* src/app/globals.css for WaveForum */
+
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #1a1a1a; /* Darker text for light mode */
+  --primary-color: #007bff; /* A standard blue for primary actions */
+  --secondary-color: #6c757d; /* A standard gray for secondary actions */
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #1a1a1a; /* Dark background */
+    --foreground: #f0f0f0; /* Light text for dark mode */
+    --primary-color: #66b3ff; /* Lighter blue for dark mode */
+    --secondary-color: #adb5bd; /* Lighter gray for dark mode */
   }
 }
 
@@ -14,14 +20,15 @@ html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
+  font-family: 'Inter', sans-serif; /* Using Inter font */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 * {
@@ -35,8 +42,11 @@ a {
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
+/* Basic styling for common elements */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--foreground);
+}
+
+button {
+  cursor: pointer;
 }
