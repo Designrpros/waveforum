@@ -5,7 +5,7 @@ import type { NextPage } from 'next';
 import Head from 'next/head';
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import { useRouter } from 'next/navigation'; // 1. Import the router
+import { useRouter } from 'next/navigation';
 
 // Import Firebase authentication
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
@@ -121,7 +121,7 @@ const LoginPage: NextPage = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const router = useRouter(); // 2. Initialize the router
+  const router = useRouter();
   const auth = getAuth(app);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -138,26 +138,30 @@ const LoginPage: NextPage = () => {
       if (isLoginMode) {
         // Sign In
         await signInWithEmailAndPassword(auth, email, password);
-        // 3. Redirect on successful login
-        router.push('/dashboard'); 
+        router.push('/dashboard');
       } else {
         // Register
         await createUserWithEmailAndPassword(auth, email, password);
         setSuccess('Registration successful! You can now log in.');
         setIsLoginMode(true);
       }
-    } catch (firebaseError: any) {
-      console.error('Auth Error:', firebaseError);
+    } catch (e: unknown) { // Catch error as 'unknown' for type safety
+      console.error('Auth Error:', e);
       let errorMessage = 'An unexpected error occurred.';
-      // Using a simpler error message for better UX
-      if (firebaseError.code.includes('auth/')) {
-         errorMessage = 'Invalid email or password. Please try again.';
-      }
-      if (firebaseError.code === 'auth/email-already-in-use') {
-        errorMessage = 'This email is already registered.';
-      }
-       if (firebaseError.code === 'auth/weak-password') {
-        errorMessage = 'Password should be at least 6 characters.';
+
+      // Type guard to safely check for the error code
+      if (typeof e === 'object' && e !== null && 'code' in e) {
+        const firebaseError = e as { code: string }; // Assert the type after checking
+        
+        if (firebaseError.code.includes('auth/')) {
+           errorMessage = 'Invalid email or password. Please try again.';
+        }
+        if (firebaseError.code === 'auth/email-already-in-use') {
+          errorMessage = 'This email is already registered.';
+        }
+        if (firebaseError.code === 'auth/weak-password') {
+          errorMessage = 'Password should be at least 6 characters.';
+        }
       }
       setError(errorMessage);
     }

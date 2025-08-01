@@ -3,7 +3,7 @@
 
 import type { NextPage } from 'next';
 import Head from 'next/head';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
@@ -11,7 +11,7 @@ import {
   UploadCloud, DollarSign, BarChart2, Users,
   Music, Trash2, ChevronDown, ChevronRight,
   Edit, Shield, Download, Info
-} from 'lucide-react'; // Import Info icon
+} from 'lucide-react';
 import Link from 'next/link';
 
 // --- Styled Components ---
@@ -103,12 +103,12 @@ const ReleaseListContainer = styled.div`
 
 const AlbumItem = styled.div`
   display: flex;
-  flex-direction: column; /* Changed to column to stack info and rejection reason */
+  flex-direction: column;
   background-color: ${({ theme }) => theme.cardBg};
   border: 1px solid ${({ theme }) => theme.borderColor};
   border-radius: 0.75rem;
   box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-  overflow: hidden; /* Ensures inner elements respect border-radius */
+  overflow: hidden;
 `;
 
 const AlbumItemHeader = styled.div`
@@ -117,7 +117,7 @@ const AlbumItemHeader = styled.div`
   justify-content: space-between;
   padding: 0.75rem 1rem;
   cursor: pointer;
-  background-color: ${({ theme }) => theme.cardBg}; /* Ensure background for hover effect */
+  background-color: ${({ theme }) => theme.cardBg};
   &:hover {
     background-color: ${({ theme }) => theme.buttonHoverBg};
   }
@@ -151,15 +151,14 @@ const ReleaseStatus = styled.span<{ status: 'pending' | 'approved' | 'rejected' 
   color: white;
   background-color: ${props => {
     switch (props.status) {
-      case 'approved': return '#28a745'; // Green
-      case 'pending': return '#ffc107'; // Orange
-      case 'rejected': return '#dc3545'; // Red
-      case 'unpublished': return '#6c757d'; // Gray
+      case 'approved': return '#28a745';
+      case 'pending': return '#ffc107';
+      case 'rejected': return '#dc3545';
+      case 'unpublished': return '#6c757d';
       default: return '#6c757d';
     }
   }};
 `;
-
 
 const ActionButtonGroup = styled.div`
   display: flex;
@@ -213,9 +212,9 @@ const TrackItem = styled.div`
 `;
 
 const RejectionReasonContainer = styled.div`
-  background-color: #f8d7da; /* Light red background */
-  color: #721c24; /* Dark red text */
-  border-top: 1px solid #f5c6cb; /* Red border top */
+  background-color: #f8d7da;
+  color: #721c24;
+  border-top: 1px solid #f5c6cb;
   padding: 0.75rem 1rem;
   font-size: 0.9rem;
   display: flex;
@@ -240,8 +239,8 @@ interface Release {
   tracks: Track[];
   licensing: 'cc' | 'proprietary';
   cc_type?: string;
-  status: 'pending' | 'approved' | 'rejected' | 'unpublished'; // Added status
-  rejection_reason?: string | null; // NEW: Added rejection_reason
+  status: 'pending' | 'approved' | 'rejected' | 'unpublished';
+  rejection_reason?: string | null;
 }
 
 interface FeatureCardProps {
@@ -271,7 +270,7 @@ const DashboardPage: NextPage = () => {
   const [releases, setReleases] = useState<Release[]>([]);
   const [expandedAlbums, setExpandedAlbums] = useState<Record<number, boolean>>({});
 
-  const fetchReleases = async () => {
+  const fetchReleases = useCallback(async () => {
     if (!user) return;
     try {
       const idToken = await user.getIdToken();
@@ -284,7 +283,7 @@ const DashboardPage: NextPage = () => {
     } catch (error) {
       console.error(error);
     }
-  };
+  }, [user]);
   
   useEffect(() => {
     if (!loading && !user) {
@@ -292,7 +291,7 @@ const DashboardPage: NextPage = () => {
     } else if (user) {
       fetchReleases();
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, fetchReleases]);
 
   const toggleAlbum = (albumId: number) => {
     setExpandedAlbums(prev => ({ ...prev, [albumId]: !prev[albumId] }));

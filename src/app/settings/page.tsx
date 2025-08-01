@@ -335,9 +335,13 @@ const SettingsPage: NextPage = () => {
 
       alert('Profile updated successfully!');
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Profile update error:', error);
-      alert(`Error: ${error.message}`);
+      if (error instanceof Error) {
+        alert(`Error: ${error.message}`);
+      } else {
+        alert('An unknown error occurred while updating the profile.');
+      }
     }
   };
 

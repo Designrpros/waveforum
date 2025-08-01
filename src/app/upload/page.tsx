@@ -608,10 +608,14 @@ const UploadPage: NextPage = () => {
       setTracks([{ id: 'track-1', title: '', file: null }]);
       setTrackCounter(1);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Upload error:', error);
       setUploadStatus('error');
-      setMessage(error.message || 'Failed to upload music. Please try again.');
+      if (error instanceof Error) {
+        setMessage(error.message || 'Failed to upload music. Please try again.');
+      } else {
+        setMessage('An unknown error occurred while uploading. Please try again.');
+      }
     }
   };
 
@@ -734,7 +738,7 @@ const UploadPage: NextPage = () => {
                   <FileDropArea $isDragActive={isDragActive} onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'track', track.id)} onClick={() => document.getElementById(`audio-file-${track.id}`)?.click()}>
                     <FileInput type="file" id={`audio-file-${track.id}`} accept="audio/mpeg, audio/wav, audio/flac" onChange={(e) => handleFileSelect(e, 'track', track.id)} />
                     <UploadIconWrapper><Music size={48} /></UploadIconWrapper>
-                    <p>Drag &amp; drop audio for "{track.title || `Track ${index + 1}`}" here, or click to browse</p>
+                    <p>Drag &amp; drop audio for &quot;{track.title || `Track ${index + 1}`}&quot; here, or click to browse</p>
                     {track.file && <p style={{ color: theme.text }}>Selected: {track.file.name}</p>}
                   </FileDropArea>
                 </FormGroup>
