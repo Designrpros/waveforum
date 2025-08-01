@@ -1,25 +1,20 @@
+// src/app/dashboard/page.tsx
 "use client";
 
 import type { NextPage } from 'next';
 import Head from 'next/head';
-import React, { useState } from 'react'; // Added useState import
-import styled, { useTheme } from 'styled-components';
+import React, { useState, useEffect } from 'react';
+import styled from 'styled-components';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../../context/AuthContext';
 import {
-  UploadCloud, DollarSign, BarChart2, Award, Users,
-  Link, Image as ImageIcon, Video, Music, Settings,
-  Key, Cloud, FileText, Globe, Calendar, Percent,
-  CreditCard, User, Bell, Shield, Download, Lock,
-  ListMusic, Radio, MessageSquare, BookOpen, Layers,
-  LayoutDashboard,
-} from 'lucide-react';
+  UploadCloud, DollarSign, BarChart2, Users,
+  Music, Trash2, ChevronDown, ChevronRight,
+  Edit, Shield, Download, Info
+} from 'lucide-react'; // Import Info icon
+import Link from 'next/link';
 
-// --- Reused & Adapted Styled Components for Consistency ---
-const Section = styled.section`
-  padding-top: 4rem;
-  padding-bottom: 4rem;
-  position: relative;
-`;
-
+// --- Styled Components ---
 const Container = styled.div`
   width: 100%;
   margin-left: auto;
@@ -29,63 +24,8 @@ const Container = styled.div`
   @media (min-width: 1024px) {
     max-width: 1024px;
   }
-`;
-
-const DashboardLayout = styled(Container)`
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
   padding-top: 2rem;
   padding-bottom: 4rem;
-
-  @media (min-width: 1024px) {
-    flex-direction: row;
-    align-items: flex-start;
-  }
-`;
-
-const Sidebar = styled.aside`
-  width: 100%;
-  background-color: ${({ theme }) => theme.cardBg};
-  border: 1px solid ${({ theme }) => theme.borderColor};
-  border-radius: 1rem;
-  padding: 1.5rem;
-  flex-shrink: 0; /* Prevent shrinking */
-
-  @media (min-width: 1024px) {
-    width: 250px; /* Fixed width for sidebar on desktop */
-    position: sticky;
-    top: 6rem; /* Adjust based on header height */
-  }
-`;
-
-const SidebarNav = styled.nav`
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-`;
-
-const SidebarNavLink = styled.a<{ $isActive?: boolean }>`
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  color: ${({ theme, $isActive }) => ($isActive ? theme.primaryButtonTextColor : theme.text)};
-  background-color: ${({ theme, $isActive }) => ($isActive ? theme.accentGradient.replace('linear-gradient(to right, ', '').split(', ')[0] : 'transparent')};
-  font-weight: ${({ $isActive }) => ($isActive ? '600' : '500')};
-  text-decoration: none;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background-color: ${({ theme, $isActive }) => ($isActive ? theme.accentGradient.replace('linear-gradient(to right, ', '').split(', ')[1] : theme.buttonHoverBg)};
-    color: ${({ theme, $isActive }) => ($isActive ? theme.primaryButtonTextColor : theme.text)};
-  }
-`;
-
-const MainContent = styled.div`
-  flex-grow: 1;
-  width: 100%;
 `;
 
 const DashboardSectionTitle = styled.h2`
@@ -93,7 +33,7 @@ const DashboardSectionTitle = styled.h2`
   font-weight: 700;
   color: ${({ theme }) => theme.text};
   margin-bottom: 1.5rem;
-  margin-top: 2rem; /* Spacing between sections */
+  margin-top: 2rem;
 
   &:first-of-type {
     margin-top: 0;
@@ -155,267 +95,336 @@ const FeatureCardDescription = styled.p`
   line-height: 1.4;
 `;
 
-// Helper Component for Feature Cards
+const ReleaseListContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+`;
+
+const AlbumItem = styled.div`
+  display: flex;
+  flex-direction: column; /* Changed to column to stack info and rejection reason */
+  background-color: ${({ theme }) => theme.cardBg};
+  border: 1px solid ${({ theme }) => theme.borderColor};
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  overflow: hidden; /* Ensures inner elements respect border-radius */
+`;
+
+const AlbumItemHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  background-color: ${({ theme }) => theme.cardBg}; /* Ensure background for hover effect */
+  &:hover {
+    background-color: ${({ theme }) => theme.buttonHoverBg};
+  }
+`;
+
+const ReleaseInfo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-grow: 1;
+`;
+
+const ReleaseArtwork = styled.img`
+  width: 50px;
+  height: 50px;
+  border-radius: 0.5rem;
+  object-fit: cover;
+`;
+
+const ReleaseTitle = styled.p`
+  font-weight: 600;
+  color: ${({ theme }) => theme.text};
+`;
+
+const ReleaseStatus = styled.span<{ status: 'pending' | 'approved' | 'rejected' | 'unpublished' }>`
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  margin-left: 0.5rem;
+  color: white;
+  background-color: ${props => {
+    switch (props.status) {
+      case 'approved': return '#28a745'; // Green
+      case 'pending': return '#ffc107'; // Orange
+      case 'rejected': return '#dc3545'; // Red
+      case 'unpublished': return '#6c757d'; // Gray
+      default: return '#6c757d';
+    }
+  }};
+`;
+
+
+const ActionButtonGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const ActionButton = styled.button`
+  background: none;
+  border: 1px solid ${({ theme }) => theme.borderColor};
+  color: ${({ theme }) => theme.subtleText};
+  padding: 0.5rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: ${({ theme }) => theme.buttonHoverBg};
+    color: ${({ theme }) => theme.text};
+  }
+`;
+
+const DeleteButton = styled(ActionButton)`
+  border-color: #dc3545;
+  color: #dc3545;
+  &:hover {
+    background-color: #dc3545;
+    color: white;
+  }
+`;
+
+const TrackSubList = styled.div`
+  padding-left: 2rem;
+  margin-top: 0.5rem;
+  border-left: 2px solid ${({ theme }) => theme.borderColor};
+  margin-left: 24px;
+`;
+
+const TrackItem = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  color: ${({ theme }) => theme.subtleText};
+  font-size: 0.9rem;
+`;
+
+const RejectionReasonContainer = styled.div`
+  background-color: #f8d7da; /* Light red background */
+  color: #721c24; /* Dark red text */
+  border-top: 1px solid #f5c6cb; /* Red border top */
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+`;
+
+const RejectionReasonText = styled.p`
+  margin: 0;
+  flex-grow: 1;
+`;
+
+interface Track {
+  id: number;
+  title: string;
+}
+
+interface Release {
+  id: number;
+  title: string;
+  artwork: string;
+  tracks: Track[];
+  licensing: 'cc' | 'proprietary';
+  cc_type?: string;
+  status: 'pending' | 'approved' | 'rejected' | 'unpublished'; // Added status
+  rejection_reason?: string | null; // NEW: Added rejection_reason
+}
+
 interface FeatureCardProps {
   icon: React.ReactNode;
   title: string;
   description: string;
+  href: string;
 }
 
-const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description }) => {
-  const theme = useTheme();
+const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description, href }) => {
   return (
-    <StyledFeatureCard>
-      <FeatureCardHeader>
-        <FeatureIconWrapper>{icon}</FeatureIconWrapper>
-        <FeatureCardTitle>{title}</FeatureCardTitle>
-      </FeatureCardHeader>
-      <FeatureCardDescription>{description}</FeatureCardDescription>
-    </StyledFeatureCard>
+    <Link href={href} passHref>
+      <StyledFeatureCard style={{ cursor: 'pointer' }}>
+        <FeatureCardHeader>
+          <FeatureIconWrapper>{icon}</FeatureIconWrapper>
+          <FeatureCardTitle>{title}</FeatureCardTitle>
+        </FeatureCardHeader>
+        <FeatureCardDescription>{description}</FeatureCardDescription>
+      </StyledFeatureCard>
+    </Link>
   );
 };
 
 const DashboardPage: NextPage = () => {
-  const theme = useTheme();
-  const [activeSection, setActiveSection] = useState('overview'); // State for active sidebar link
+  const router = useRouter();
+  const { user, loading } = useAuth();
+  const [releases, setReleases] = useState<Release[]>([]);
+  const [expandedAlbums, setExpandedAlbums] = useState<Record<number, boolean>>({});
+
+  const fetchReleases = async () => {
+    if (!user) return;
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch('http://51.175.105.40:8080/api/artist/my-releases', {
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch releases');
+      const data = await response.json();
+      setReleases(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+  
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    } else if (user) {
+      fetchReleases();
+    }
+  }, [user, loading, router]);
+
+  const toggleAlbum = (albumId: number) => {
+    setExpandedAlbums(prev => ({ ...prev, [albumId]: !prev[albumId] }));
+  };
+
+  const handleDelete = async (e: React.MouseEvent, albumId: number) => {
+    e.stopPropagation();
+    if (!user) return;
+    if (window.confirm('Are you sure you want to delete this album? This will also delete all associated tracks and files. This action cannot be undone.')) {
+      try {
+        const idToken = await user.getIdToken();
+        const response = await fetch(`http://51.175.105.40:8080/api/album/${albumId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        if (!response.ok) throw new Error('Failed to delete album');
+        fetchReleases();
+      } catch (error) {
+        console.error(error);
+        alert('An error occurred while deleting the album.');
+      }
+    }
+  };
+
+  const handleShowLicense = (e: React.MouseEvent, release: Release) => {
+    e.stopPropagation();
+    if (release.licensing === 'proprietary') {
+      alert(`License: Proprietary\n\nThis release is under a standard, proprietary license exclusive to WaveForum.`);
+    } else {
+      const licenseName = `CC ${release.cc_type} 4.0`;
+      const licenseUrl = `https://creativecommons.org/licenses/${release.cc_type?.toLowerCase()}/4.0`;
+      alert(`License: ${licenseName}\n\nThis release is licensed under the Creative Commons license. You can view the full terms here:\n${licenseUrl}`);
+    }
+  };
+
+  if (loading || !user) {
+    return (
+      <Container>
+        <DashboardSectionTitle>Loading...</DashboardSectionTitle>
+      </Container>
+    );
+  }
 
   return (
     <>
       <Head>
         <title>Dashboard - WaveForum Artist Portal</title>
-        <meta name="description" content="Manage your music, view analytics, and access artist tools on the WaveForum dashboard." />
+        <meta name="description" content="Manage your music on the WaveForum dashboard." />
       </Head>
-      <DashboardLayout>
-        <Sidebar>
-          <SidebarNav>
-            <SidebarNavLink href="#overview" $isActive={activeSection === 'overview'} onClick={() => setActiveSection('overview')}>
-              <LayoutDashboard size={20} /> Overview
-            </SidebarNavLink>
-            <SidebarNavLink href="#releases" $isActive={activeSection === 'releases'} onClick={() => setActiveSection('releases')}>
-              <Music size={20} /> Releases
-            </SidebarNavLink>
-            <SidebarNavLink href="#earnings" $isActive={activeSection === 'earnings'} onClick={() => setActiveSection('earnings')}>
-              <DollarSign size={20} /> Earnings
-            </SidebarNavLink>
-            <SidebarNavLink href="#promo" $isActive={activeSection === 'promo'} onClick={() => setActiveSection('promo')}>
-              <Globe size={20} /> Promotion
-            </SidebarNavLink>
-            <SidebarNavLink href="#analytics" $isActive={activeSection === 'analytics'} onClick={() => setActiveSection('analytics')}>
-              <BarChart2 size={20} /> Analytics
-            </SidebarNavLink>
-            <SidebarNavLink href="#content" $isActive={activeSection === 'content'} onClick={() => setActiveSection('content')}>
-              <Layers size={20} /> Content & Rights
-            </SidebarNavLink>
-            <SidebarNavLink href="#account" $isActive={activeSection === 'account'} onClick={() => setActiveSection('account')}>
-              <User size={20} /> Account
-            </SidebarNavLink>
-          </SidebarNav>
-        </Sidebar>
+      <Container style={{ paddingTop: '2rem', paddingBottom: '4rem' }}>
+        <section>
+          <DashboardSectionTitle>Dashboard Overview</DashboardSectionTitle>
+          <FeatureGrid>
+            <FeatureCard
+              href="/upload"
+              icon={<UploadCloud size={20} />}
+              title="New Release"
+              description="Upload your next song or album to the platform."
+            />
+            <FeatureCard
+              href="#analytics"
+              icon={<BarChart2 size={20} />}
+              title="View Analytics"
+              description="Check your latest streaming statistics (coming soon)."
+            />
+            <FeatureCard
+              href="#earnings"
+              icon={<DollarSign size={20} />}
+              title="Current Earnings"
+              description="Manage royalties and payouts (coming soon)."
+            />
+            <FeatureCard
+              href="/settings"
+              icon={<Users size={20} />}
+              title="Edit Profile"
+              description="Update your artist name, bio, and artwork."
+            />
+          </FeatureGrid>
+        </section>
 
-        <MainContent>
-          <Section id="overview">
-            <DashboardSectionTitle>Dashboard Overview</DashboardSectionTitle>
-            <FeatureGrid>
-              <FeatureCard
-                icon={<UploadCloud size={20} />}
-                title="New Release"
-                description="Upload your next song or album and get it distributed worldwide."
-              />
-              <FeatureCard
-                icon={<BarChart2 size={20} />}
-                title="View Analytics"
-                description="Check your latest streaming and sales statistics."
-              />
-              <FeatureCard
-                icon={<DollarSign size={20} />}
-                title="Current Earnings"
-                description="See your accumulated royalties and manage payouts."
-              />
-              <FeatureCard
-                icon={<Link size={20} />}
-                title="Create HyperFollow"
-                description="Generate a smart link for your new release to share everywhere."
-              />
-            </FeatureGrid>
-          </Section>
-
-          <Section id="releases">
-            <DashboardSectionTitle>Release Management</DashboardSectionTitle>
-            <FeatureGrid>
-              <FeatureCard
-                icon={<UploadCloud size={20} />}
-                title="Upload New Music"
-                description="Distribute unlimited songs and albums to all major platforms."
-              />
-              <FeatureCard
-                icon={<Calendar size={20} />}
-                title="Schedule Release Date"
-                description="Set custom release and pre-order dates for your upcoming music."
-              />
-              <FeatureCard
-                icon={<ListMusic size={20} />}
-                title="Manage Existing Releases"
-                description="Edit metadata, artwork, and distribution for your uploaded tracks."
-              />
-              <FeatureCard
-                icon={<Award size={20} />}
-                title="Custom Label Name"
-                description="Brand your releases with your own custom label name."
-              />
-              <FeatureCard
-                icon={<Percent size={20} />}
-                title="iTunes Pricing"
-                description="Control the pricing of your music on iTunes."
-              />
-            </FeatureGrid>
-          </Section>
-
-          <Section id="earnings">
-            <DashboardSectionTitle>Earnings & Royalties</DashboardSectionTitle>
-            <FeatureGrid>
-              <FeatureCard
-                icon={<DollarSign size={20} />}
-                title="View All Earnings"
-                description="Access detailed reports of your accumulated royalties and sales."
-              />
-              <FeatureCard
-                icon={<Percent size={20} />}
-                title="Manage Royalty Splits"
-                description="Set up automatic royalty payments to your collaborators."
-              />
-              <FeatureCard
-                icon={<CreditCard size={20} />}
-                title="Payment & Withdrawal"
-                description="Manage your payment methods and initiate payouts."
-              />
-              <FeatureCard
-                icon={<Video size={20} />}
-                title="YouTube Monetization"
-                description="Monetize your music videos from ads and YouTube Music subscribers."
-              />
-            </FeatureGrid>
-          </Section>
-
-          <Section id="promo">
-            <DashboardSectionTitle>Promotion & Marketing</DashboardSectionTitle>
-            <FeatureGrid>
-              <FeatureCard
-                icon={<Link size={20} />}
-                title="HyperFollow Links"
-                description="Generate smart landing pages for your music with pre-save options."
-              />
-              <FeatureCard
-                icon={<ImageIcon size={20} />}
-                title="Promo Cards"
-                description="Create shareable graphics for your social media campaigns."
-              />
-              <FeatureCard
-                icon={<Video size={20} />}
-                title="Mini Videos / Visualizers"
-                description="Generate short, engaging video clips for your tracks."
-              />
-              <FeatureCard
-                icon={<Globe size={20} />}
-                title="Playlist Submission"
-                description="Submit your music for consideration on curated playlists within Waveform."
-              />
-              <FeatureCard
-                icon={<MessageSquare size={20} />}
-                title="Fan Engagement Tools"
-                description="(Coming Soon) Connect directly with your listeners and community."
-              />
-              <FeatureCard
-                icon={<BookOpen size={20} />}
-                title="Lyrics Management"
-                description="Add and sync lyrics for your songs across streaming platforms."
-              />
-            </FeatureGrid>
-          </Section>
-
-          <Section id="analytics">
-            <DashboardSectionTitle>Analytics & Insights</DashboardSectionTitle>
-            <FeatureGrid>
-              <FeatureCard
-                icon={<BarChart2 size={20} />}
-                title="Streaming & Sales Stats"
-                description="Access detailed daily and historical performance data."
-              />
-              <FeatureCard
-                icon={<Users size={20} />}
-                title="Audience Demographics"
-                description="(Coming Soon) Understand who your listeners are and where they're located."
-              />
-              <FeatureCard
-                icon={<Globe size={20} />}
-                title="Platform Access"
-                description="Get instant access to Spotify for Artists, Apple Music for Artists, and more."
-              />
-            </FeatureGrid>
-          </Section>
-
-          <Section id="content">
-            <DashboardSectionTitle>Content Management & Rights</DashboardSectionTitle>
-            <FeatureGrid>
-              <FeatureCard
-                icon={<Key size={20} />}
-                title="ISRC & UPC Codes"
-                description="Automatically assigned and managed unique identifiers for your music."
-              />
-              <FeatureCard
-                icon={<FileText size={20} />}
-                title="Cover Song Licensing"
-                description="Easily obtain necessary licenses for releasing cover songs."
-              />
-              <FeatureCard
-                icon={<Lock size={20} />}
-                title="Content Protection (DistroLock)"
-                description="Protect your music from unauthorized releases and re-releases."
-              />
-              <FeatureCard
-                icon={<Cloud size={20} />}
-                title="Vault (Unlimited Backups)"
-                description="Securely store unlimited backups of all your uploaded audio and assets."
-              />
-              <FeatureCard
-                icon={<Video size={20} />}
-                title="YouTube Content ID"
-                description="Manage content ID for your music on YouTube to prevent unauthorized use."
-              />
-            </FeatureGrid>
-          </Section>
-
-          <Section id="account">
-            <DashboardSectionTitle>Account & Settings</DashboardSectionTitle>
-            <FeatureGrid>
-              <FeatureCard
-                icon={<User size={20} />}
-                title="Profile Management"
-                description="Edit your artist bio, images, and social media links."
-              />
-              <FeatureCard
-                icon={<Settings size={20} />}
-                title="Subscription & Billing"
-                description="View your current plan, upgrade, or manage billing information."
-              />
-              <FeatureCard
-                icon={<Users size={20} />}
-                title="Multi-Artist Accounts"
-                description="(Premium Feature) Manage multiple artists or bands under one account."
-              />
-              <FeatureCard
-                icon={<Shield size={20} />}
-                title="Security Settings"
-                description="Manage your password, two-factor authentication, and account security."
-              />
-              <FeatureCard
-                icon={<Bell size={20} />}
-                title="Notifications"
-                description="Configure your notification preferences for releases, earnings, and updates."
-              />
-            </FeatureGrid>
-          </Section>
-        </MainContent>
-      </DashboardLayout>
+        <section>
+          <DashboardSectionTitle>My Releases</DashboardSectionTitle>
+          <ReleaseListContainer>
+            {releases.length > 0 ? releases.map(release => (
+              <AlbumItem key={release.id}>
+                <AlbumItemHeader onClick={() => toggleAlbum(release.id)}>
+                  <ReleaseInfo>
+                    {expandedAlbums[release.id] ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                    <ReleaseArtwork src={release.artwork} alt={release.title} />
+                    <ReleaseTitle>{release.title}</ReleaseTitle>
+                    <ReleaseStatus status={release.status}>
+                      {release.status.charAt(0).toUpperCase() + release.status.slice(1)}
+                    </ReleaseStatus>
+                  </ReleaseInfo>
+                  <ActionButtonGroup>
+                    <ActionButton title="Download assets (coming soon)" onClick={(e) => { e.stopPropagation(); alert('Download functionality is coming soon!'); }}>
+                      <Download size={16} />
+                    </ActionButton>
+                    <ActionButton title="View license details" onClick={(e) => handleShowLicense(e, release)}>
+                      <Shield size={16} />
+                    </ActionButton>
+                    <ActionButton title="Edit release (coming soon)" onClick={(e) => { e.stopPropagation(); alert('Editing releases is coming soon!'); }}>
+                      <Edit size={16} />
+                    </ActionButton>
+                    <DeleteButton title="Delete release" onClick={(e) => handleDelete(e, release.id)}>
+                      <Trash2 size={16} />
+                    </DeleteButton>
+                  </ActionButtonGroup>
+                </AlbumItemHeader>
+                {release.status === 'rejected' && release.rejection_reason && (
+                  <RejectionReasonContainer>
+                    <Info size={18} />
+                    <RejectionReasonText>
+                      **Reason for Rejection:** {release.rejection_reason}
+                    </RejectionReasonText>
+                  </RejectionReasonContainer>
+                )}
+                {expandedAlbums[release.id] && (
+                  <TrackSubList>
+                    {release.tracks.length > 0 ? release.tracks.map(track => (
+                      <TrackItem key={track.id}>
+                        <Music size={14} />
+                        <span>{track.title}</span>
+                      </TrackItem>
+                    )) : <TrackItem>No tracks in this album.</TrackItem>}
+                  </TrackSubList>
+                )}
+              </AlbumItem>
+            )) : <p>You have not uploaded any releases yet.</p>}
+          </ReleaseListContainer>
+        </section>
+      </Container>
     </>
   );
 };

@@ -1,15 +1,19 @@
+// src/app/upload/page.tsx
 "use client";
 
 import type { NextPage } from 'next';
 import Head from 'next/head';
-import React, { useState, useCallback, ChangeEvent } from 'react';
+import React, { useState, useCallback, ChangeEvent, useEffect, useMemo } from 'react';
 import styled, { useTheme } from 'styled-components';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../../context/AuthContext';
 import {
   UploadCloud, Music, Image as ImageIcon,
-  Info, CheckCircle, XCircle, Loader, PlusCircle, Trash2,
-} from 'lucide-react'; // Removed unused imports: FileText, Award, Percent
+  Info, CheckCircle, XCircle, Loader, PlusCircle, Trash2, X
+} from 'lucide-react';
+import { genreList } from '../../data/genres';
 
-// --- Reused & Adapted Styled Components for Consistency ---
+// --- Styled Components ---
 const Section = styled.section`
   padding-top: 4rem;
   padding-bottom: 4rem;
@@ -47,8 +51,6 @@ const SectionSubtitle = styled.p`
   margin-right: auto;
   margin-bottom: 3rem;
 `;
-
-// --- New Styled Components for Upload Form ---
 
 const UploadForm = styled.form`
   background-color: ${({ theme }) => theme.cardBg};
@@ -92,28 +94,6 @@ const Input = styled.input`
   background-color: ${({ theme }) => theme.buttonBg};
   color: ${({ theme }) => theme.text};
   font-size: 1rem;
-  transition: border-color 0.2s, box-shadow 0.2s;
-
-  &:focus {
-    outline: none;
-    border-color: ${({ theme }) => theme.accentGradient.replace('linear-gradient(to right, ', '').split(', ')[0]};
-    box-shadow: 0 0 0 2px ${({ theme }) => theme.accentGradient.replace('linear-gradient(to right, ', '').split(', ')[0].replace(')', ', 0.2)')};
-  }
-`;
-
-const Select = styled.select`
-  width: 100%;
-  padding: 0.75rem 1rem;
-  border: 1px solid ${({ theme }) => theme.borderColor};
-  border-radius: 0.5rem;
-  background-color: ${({ theme }) => theme.buttonBg};
-  color: ${({ theme }) => theme.text};
-  font-size: 1rem;
-  appearance: none; /* Remove default arrow */
-  background-image: url(&#34;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd'/%3E%3C/svg%3E&#34;);
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-  background-size: 1.5em 1.5em;
   transition: border-color 0.2s, box-shadow 0.2s;
 
   &:focus {
@@ -301,7 +281,7 @@ const CheckboxOption = styled.label`
     transition: all 0.2s ease;
 
     &::before {
-      content: "&#10003;"; /* Unicode checkmark */
+      content: "✓";
       font-size: 0.8rem;
       color: white;
       transform: scale(0);
@@ -337,29 +317,10 @@ const AddTrackButton = styled.button`
   }
 `;
 
-const TrackListItem = styled.div`
-  background-color: ${({ theme }) => theme.buttonBg};
-  border: 1px solid ${({ theme }) => theme.borderColor};
-  border-radius: 0.5rem;
-  padding: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-top: 0.5rem;
-
-  p {
-    margin: 0;
-    color: ${({ theme }) => theme.text};
-    font-size: 0.95rem;
-    flex-grow: 1;
-  }
-`;
-
 const RemoveTrackButton = styled.button`
   background: none;
   border: none;
-  color: #dc3545; /* Red for delete */
+  color: #dc3545;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -373,38 +334,133 @@ const RemoveTrackButton = styled.button`
   }
 `;
 
-// Define a type for a single track
+const InfoText = styled.p`
+  font-size: 0.85rem;
+  color: ${({ theme }) => theme.subtleText};
+  margin-top: 0.5rem;
+`;
+
+const GenreInputWrapper = styled.div`
+  position: relative;
+`;
+
+const GenreTagContainer = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid ${({ theme }) => theme.borderColor};
+  border-radius: 0.5rem;
+  min-height: 40px;
+`;
+
+const GenreTag = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: ${({ theme }) => theme.buttonBg};
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.9rem;
+`;
+
+const RemoveTagButton = styled.button`
+  background: none;
+  border: none;
+  color: ${({ theme }) => theme.subtleText};
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  &:hover {
+    color: ${({ theme }) => theme.text};
+  }
+`;
+
+const SuggestionsList = styled.ul`
+  list-style: none;
+  padding: 0;
+  margin-top: 0.5rem;
+  position: absolute;
+  width: 100%;
+  background-color: ${({ theme }) => theme.cardBg};
+  border: 1px solid ${({ theme }) => theme.borderColor};
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  z-index: 10;
+  max-height: 200px;
+  overflow-y: auto;
+`;
+
+const SuggestionItem = styled.li`
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  &:hover {
+    background-color: ${({ theme }) => theme.buttonHoverBg};
+  }
+`;
+
 interface Track {
-  id: string; // Unique ID for React keys
+  id: string; 
   title: string;
   file: File | null;
 }
 
 const UploadPage: NextPage = () => {
   const theme = useTheme();
+  const router = useRouter(); 
+  const { user, loading } = useAuth();
+
   const [isDragActive, setIsDragActive] = useState(false);
   const [artworkFile, setArtworkFile] = useState<File | null>(null);
   const [artworkPreviewUrl, setArtworkPreviewUrl] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState<string | null>(null);
-
-  // Release type: 'single' or 'album'
   const [releaseType, setReleaseType] = useState<'single' | 'album'>('single');
-
-  // Album/Release level metadata
   const [releaseArtistName, setReleaseArtistName] = useState('');
-  const [albumName, setAlbumName] = useState(''); // Only relevant for albums
-  const [genre, setGenre] = useState('');
-  const [releaseDate, setReleaseDate] = useState('');
+  const [albumName, setAlbumName] = useState('');
+  const [genres, setGenres] = useState<string[]>([]);
+  const [genreInput, setGenreInput] = useState('');
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [releaseDate, setReleaseDate] = useState(new Date().toISOString().split('T')[0]);
   const [description, setDescription] = useState('');
-
-  // Licensing state
   const [licensing, setLicensing] = useState<'cc' | 'proprietary'>('proprietary');
-  const [ccType, setCcType] = useState<string | null>(null); // e.g., 'BY', 'BY-SA', 'BY-NC'
-
-  // Tracks state for albums (array of objects)
+  const [ccType, setCcType] = useState<string | null>(null);
   const [tracks, setTracks] = useState<Track[]>([{ id: 'track-1', title: '', file: null }]);
-  const [trackCounter, setTrackCounter] = useState(1); // To generate unique IDs for new tracks
+  const [trackCounter, setTrackCounter] = useState(1);
+
+  const allGenres = useMemo(() => genreList.flatMap(group => group.options), []);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [user, loading, router]);
+
+  useEffect(() => {
+    if (genreInput) {
+      const filtered = allGenres.filter(
+        g => g.toLowerCase().includes(genreInput.toLowerCase()) && !genres.includes(g)
+      );
+      setSuggestions(filtered.slice(0, 5));
+    } else {
+      setSuggestions([]);
+    }
+  }, [genreInput, genres, allGenres]);
+
+  const handleAddGenre = (genre: string) => {
+    if (genre && !genres.includes(genre)) {
+      setGenres([...genres, genre]);
+      setGenreInput('');
+      setSuggestions([]);
+    }
+  };
+
+  const handleRemoveGenre = (genreToRemove: string) => {
+    setGenres(genres.filter(g => g !== genreToRemove));
+  };
 
   const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -438,14 +494,14 @@ const UploadPage: NextPage = () => {
         if (audio) handleTrackFile(trackId, audio);
       }
     }
-  }, []); // Removed 'tracks' from dependency array
+  }, []);
 
   const handleFileSelect = (e: ChangeEvent<HTMLInputElement>, targetType: 'artwork' | 'track', trackId?: string) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      if (targetType === 'track' && trackId) { // Corrected 'type' to 'targetType' and added trackId check
+      if (targetType === 'track' && trackId) {
         handleTrackFile(trackId, files[0]);
-      } else if (targetType === 'artwork') { // Corrected 'type' to 'targetType'
+      } else if (targetType === 'artwork') {
         handleArtworkFile(files[0]);
       }
     }
@@ -485,96 +541,65 @@ const UploadPage: NextPage = () => {
     setTracks(prevTracks => prevTracks.filter(track => track.id !== trackId));
   };
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setUploadStatus('loading');
     setMessage(null);
 
-    // Basic validation
-    let isValid = true;
-    if (!releaseArtistName || !genre || !releaseDate || !artworkFile) {
-      setMessage('Please fill all required release details and upload artwork.');
-      isValid = false;
-    }
-
-    if (releaseType === 'single') {
-      if (!tracks[0].file || !tracks[0].title) {
-        setMessage('Please upload the audio file and provide a title for your single.');
-        isValid = false;
-      }
-    } else { // Album
-      if (!albumName) {
-        setMessage('Please provide an album name.');
-        isValid = false;
-      }
-      if (tracks.length === 0) {
-        setMessage('Please add at least one track to your album.');
-        isValid = false;
-      }
-      for (const track of tracks) {
-        if (!track.file || !track.title) {
-          setMessage(`Please upload audio and provide a title for all tracks. Missing: ${track.title || 'Untitled Track'}`);
-          isValid = false;
-          break;
-        }
-      }
-    }
-
-    if (licensing === 'cc' && !ccType) {
-      setMessage('Please select a Creative Commons type.');
-      isValid = false;
-    }
-
-    if (!isValid) {
+    if (!artworkFile || tracks.some(t => !t.file || !t.title) || genres.length === 0) {
+      setMessage('Please ensure artwork, all track files, titles, and at least one genre are provided.');
       setUploadStatus('error');
       return;
     }
 
-    // Simulate API call
-    console.log('Uploading Release:', {
-      releaseType,
-      releaseArtistName,
-      albumName: releaseType === 'album' ? albumName : undefined,
-      genre,
-      releaseDate,
-      description,
-      artworkFile: artworkFile?.name,
-      licensing,
-      ccType: licensing === 'cc' ? ccType : undefined,
-      tracks: tracks.map(t => ({ id: t.id, title: t.title, fileName: t.file?.name })),
+    if (!user) {
+      setMessage('You must be logged in to upload music.');
+      setUploadStatus('error');
+      return;
+    }
+    const idToken = await user.getIdToken();
+
+    const formData = new FormData();
+    
+    formData.append('artwork', artworkFile);
+    tracks.forEach(track => {
+      if (track.file) {
+        formData.append('tracks', track.file);
+      }
     });
 
-    try {
-      // In a real application, you'd send these files and metadata to your backend API
-      // Example:
-      // const formData = new FormData();
-      // formData.append('artwork', artworkFile);
-      // tracks.forEach((track, index) => {
-      //   if (track.file) formData.append(`track-${index}`, track.file);
-      //   formData.append(`track-${index}-title`, track.title);
-      // });
-      // formData.append('releaseType', releaseType);
-      // ... and so on for other metadata
-      //
-      // const response = await fetch('/api/upload-release', {
-      //   method: 'POST',
-      //   body: formData,
-      // });
-      //
-      // if (!response.ok) {
-      //   throw new Error('Upload failed');
-      // }
+    formData.append('releaseArtistName', releaseArtistName);
+    formData.append('releaseType', releaseType);
+    formData.append('albumName', albumName);
+    formData.append('genres', genres.join(', '));
+    formData.append('releaseDate', releaseDate);
+    formData.append('description', description);
+    formData.append('licensing', licensing);
+    if (ccType) formData.append('ccType', ccType);
+    
+    const trackTitles = tracks.map(t => t.title);
+    formData.append('trackTitles', JSON.stringify(trackTitles));
 
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate network delay
+    try {
+      const response = await fetch('http://51.175.105.40:8080/api/upload', { 
+          method: 'POST',
+          body: formData,
+          headers: {
+              'Authorization': `Bearer ${idToken}`
+          }
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.message || 'Upload failed');
+      }
       setUploadStatus('success');
-      setMessage('Release uploaded successfully! It will be reviewed by our team.');
-      // Reset form
+      setMessage(result.message);
+      
       setReleaseType('single');
       setReleaseArtistName('');
       setAlbumName('');
-      setGenre('');
-      setReleaseDate('');
+      setGenres([]);
+      setReleaseDate(new Date().toISOString().split('T')[0]);
       setDescription('');
       setArtworkFile(null);
       setArtworkPreviewUrl(null);
@@ -583,18 +608,24 @@ const UploadPage: NextPage = () => {
       setTracks([{ id: 'track-1', title: '', file: null }]);
       setTrackCounter(1);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload error:', error);
       setUploadStatus('error');
-      setMessage('Failed to upload music. Please try again.');
+      setMessage(error.message || 'Failed to upload music. Please try again.');
     }
   };
+
+  if (loading || !user) {
+      return (
+        <Container><SectionTitle>Loading...</SectionTitle></Container>
+      );
+  }
 
   return (
     <>
       <Head>
         <title>Upload Music - WaveForum Artist Portal</title>
-        <meta name="description" content="Upload your music to WaveForum for distribution to the Waveform app and other platforms." />
+        <meta name="description" content="Upload your music to WaveForum for distribution." />
       </Head>
       <Container>
         <Section>
@@ -603,127 +634,86 @@ const UploadPage: NextPage = () => {
             Get your tracks heard by a global audience. Fill in the details and upload your masterpiece.
           </SectionSubtitle>
 
-          <UploadForm onSubmit={handleSubmit}>
-            {/* Release Type Selection */}
+          <UploadForm onSubmit={handleSubmit} noValidate>
             <FormSectionTitle>Release Type</FormSectionTitle>
             <FormGroup>
               <RadioGroup>
                 <RadioOption>
-                  <input
-                    type="radio"
-                    name="release-type"
-                    value="single"
-                    checked={releaseType === 'single'}
-                    onChange={() => setReleaseType('single')}
-                  />
+                  <input type="radio" name="release-type" value="single" checked={releaseType === 'single'} onChange={() => setReleaseType('single')} />
                   Single (One track release)
                 </RadioOption>
                 <RadioOption>
-                  <input
-                    type="radio"
-                    name="release-type"
-                    value="album"
-                    checked={releaseType === 'album'}
-                    onChange={() => setReleaseType('album')}
-                  />
+                  <input type="radio" name="release-type" value="album" checked={releaseType === 'album'} onChange={() => setReleaseType('album')} />
                   Album / EP (Multiple tracks)
                 </RadioOption>
               </RadioGroup>
             </FormGroup>
 
-            {/* General Release Details */}
             <FormSectionTitle>General Release Details</FormSectionTitle>
             <FormGroup>
               <Label htmlFor="release-artist-name">Artist Name(s)</Label>
-              <Input
-                type="text"
-                id="release-artist-name"
-                value={releaseArtistName}
-                onChange={(e) => setReleaseArtistName(e.target.value)}
-                placeholder="e.g., Aurora Bloom (use commas for multiple artists)"
-                required
-              />
+              <Input type="text" id="release-artist-name" value={releaseArtistName} onChange={(e) => setReleaseArtistName(e.target.value)} placeholder="e.g., Aurora Bloom" required />
             </FormGroup>
             {releaseType === 'album' && (
               <FormGroup>
                 <Label htmlFor="album-name">Album Name</Label>
-                <Input
-                  type="text"
-                  id="album-name"
-                  value={albumName}
-                  onChange={(e) => setAlbumName(e.target.value)}
-                  placeholder="e.g., Celestial Harmonies"
-                  required={releaseType === 'album'}
-                />
+                <Input type="text" id="album-name" value={albumName} onChange={(e) => setAlbumName(e.target.value)} placeholder="e.g., Celestial Harmonies" required={releaseType === 'album'} />
               </FormGroup>
             )}
+            
             <FormGroup>
-              <Label htmlFor="genre">Genre</Label>
-              <Select
-                id="genre"
-                value={genre}
-                onChange={(e) => setGenre(e.target.value)}
-                required
-              >
-                <option value="">Select a Genre</option>
-                <option value="Electronic">Electronic</option>
-                <option value="Acoustic">Acoustic</option>
-                <option value="Experimental">Experimental</option>
-                <option value="Folk">Folk</option>
-                <option value="Instrumental">Instrumental</option>
-                <option value="Ambient">Ambient</option>
-                <option value="Hip-Hop">Hip-Hop</option>
-                <option value="Rock">Rock</option>
-                <option value="Pop">Pop</option>
-                <option value="Jazz">Jazz</option>
-                <option value="Classical">Classical</option>
-                <option value="Metal">Metal</option>
-                <option value="Blues">Blues</option>
-                <option value="Country">Country</option>
-                <option value="Reggae">Reggae</option>
-                <option value="World">World</option>
-                {/* Add more genres as needed */}
-              </Select>
+              <Label htmlFor="genres">Genres</Label>
+              <GenreInputWrapper>
+                <Input
+                  type="text"
+                  id="genres"
+                  value={genreInput}
+                  onChange={(e) => setGenreInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && suggestions.length > 0) {
+                      e.preventDefault();
+                      handleAddGenre(suggestions[0]);
+                    }
+                  }}
+                  placeholder="Type to search for genres..."
+                />
+                {suggestions.length > 0 && (
+                  <SuggestionsList>
+                    {suggestions.map(s => (
+                      <SuggestionItem key={s} onClick={() => handleAddGenre(s)}>
+                        {s}
+                      </SuggestionItem>
+                    ))}
+                  </SuggestionsList>
+                )}
+              </GenreInputWrapper>
+              <GenreTagContainer>
+                {genres.map(g => (
+                  <GenreTag key={g}>
+                    {g}
+                    <RemoveTagButton type="button" onClick={() => handleRemoveGenre(g)}>
+                      <X size={14} />
+                    </RemoveTagButton>
+                  </GenreTag>
+                ))}
+              </GenreTagContainer>
+              <InfoText>Select one or more genres for your release.</InfoText>
             </FormGroup>
+
             <FormGroup>
               <Label htmlFor="release-date">Release Date</Label>
-              <Input
-                type="date"
-                id="release-date"
-                value={releaseDate}
-                onChange={(e) => setReleaseDate(e.target.value)}
-                required
-              />
+              <Input type="date" id="release-date" value={releaseDate} onChange={(e) => setReleaseDate(e.target.value)} required />
             </FormGroup>
             <FormGroup>
               <Label htmlFor="description">Description (Optional)</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Tell us more about your release..."
-              />
+              <Textarea id="description" value={description} onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)} placeholder="Tell us more about your release..." />
             </FormGroup>
 
-            {/* Artwork Upload */}
             <FormSectionTitle>Album Artwork</FormSectionTitle>
             <FormGroup>
               <Label htmlFor="artwork-file">Artwork (JPG, PNG - Min. 1000x1000px)</Label>
-              <FileDropArea
-                $isDragActive={isDragActive}
-                onDragEnter={handleDragEnter}
-                onDragLeave={handleDragLeave}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, 'artwork')}
-                onClick={() => document.getElementById('artwork-file')?.click()}
-              >
-                <FileInput
-                  type="file"
-                  id="artwork-file"
-                  accept="image/jpeg, image/png"
-                  onChange={(e) => handleFileSelect(e, 'artwork')}
-                  required
-                />
+              <FileDropArea $isDragActive={isDragActive} onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'artwork')} onClick={() => document.getElementById('artwork-file')?.click()}>
+                <FileInput type="file" id="artwork-file" accept="image/jpeg, image/png" onChange={(e) => handleFileSelect(e, 'artwork')} />
                 <UploadIconWrapper><ImageIcon size={48} /></UploadIconWrapper>
                 <p>Drag &amp; drop your artwork here, or click to browse</p>
                 {artworkFile && <p style={{ color: theme.text }}>Selected: {artworkFile.name}</p>}
@@ -731,41 +721,20 @@ const UploadPage: NextPage = () => {
               </FileDropArea>
             </FormGroup>
 
-            {/* Tracks Section */}
             <FormSectionTitle>{releaseType === 'single' ? 'Track Details' : 'Tracks'}</FormSectionTitle>
             {tracks.map((track, index) => (
               <React.Fragment key={track.id}>
                 {releaseType === 'album' && <h4 style={{ color: theme.text, marginBottom: '0.5rem', marginTop: index > 0 ? '1.5rem' : '0' }}>Track {index + 1}</h4>}
                 <FormGroup>
                   <Label htmlFor={`track-title-${track.id}`}>Track Title</Label>
-                  <Input
-                    type="text"
-                    id={`track-title-${track.id}`}
-                    value={track.title}
-                    onChange={(e) => handleTrackTitleChange(track.id, e.target.value)}
-                    placeholder={`e.g., Track ${index + 1} Title`}
-                    required
-                  />
+                  <Input type="text" id={`track-title-${track.id}`} value={track.title} onChange={(e) => handleTrackTitleChange(track.id, e.target.value)} placeholder={`e.g., Track ${index + 1} Title`} required />
                 </FormGroup>
                 <FormGroup>
                   <Label htmlFor={`audio-file-${track.id}`}>Audio File (MP3, WAV, FLAC)</Label>
-                  <FileDropArea
-                    $isDragActive={isDragActive}
-                    onDragEnter={handleDragEnter}
-                    onDragLeave={handleDragLeave}
-                    onDragOver={handleDragOver}
-                    onDrop={(e) => handleDrop(e, 'track', track.id)}
-                    onClick={() => document.getElementById(`audio-file-${track.id}`)?.click()}
-                  >
-                    <FileInput
-                      type="file"
-                      id={`audio-file-${track.id}`}
-                      accept="audio/mpeg, audio/wav, audio/flac"
-                      onChange={(e) => handleFileSelect(e, 'track', track.id)}
-                      required
-                    />
+                  <FileDropArea $isDragActive={isDragActive} onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'track', track.id)} onClick={() => document.getElementById(`audio-file-${track.id}`)?.click()}>
+                    <FileInput type="file" id={`audio-file-${track.id}`} accept="audio/mpeg, audio/wav, audio/flac" onChange={(e) => handleFileSelect(e, 'track', track.id)} />
                     <UploadIconWrapper><Music size={48} /></UploadIconWrapper>
-                    <p>Drag &amp; drop audio for &#34;{track.title || `Track ${index + 1}`}&#34; here, or click to browse</p>
+                    <p>Drag &amp; drop audio for "{track.title || `Track ${index + 1}`}" here, or click to browse</p>
                     {track.file && <p style={{ color: theme.text }}>Selected: {track.file.name}</p>}
                   </FileDropArea>
                 </FormGroup>
@@ -782,91 +751,37 @@ const UploadPage: NextPage = () => {
               </AddTrackButton>
             )}
 
-            {/* Licensing Section */}
             <FormSectionTitle>Licensing</FormSectionTitle>
             <FormGroup>
               <Label>Choose your licensing option:</Label>
               <RadioGroup>
                 <RadioOption>
-                  <input
-                    type="radio"
-                    name="licensing"
-                    value="proprietary"
-                    checked={licensing === 'proprietary'}
-                    onChange={() => { setLicensing('proprietary'); setCcType(null); }}
-                  />
-                  Proprietary (Exclusive to Waveform.ink, no external export)
-                  <Info size={16} style={{ color: theme.subtleText }} />
-                  <span style={{ color: theme.subtleText, fontSize: '0.85rem' }}>This option means your music will be exclusively available within the Waveform app for streaming and in-app offline playback only. It cannot be exported or used outside the app.</span>
+                  <input type="radio" name="licensing" value="proprietary" checked={licensing === 'proprietary'} onChange={() => { setLicensing('proprietary'); setCcType(null); }} />
+                  Proprietary (Exclusive to Waveform.ink)
                 </RadioOption>
                 <RadioOption>
-                  <input
-                    type="radio"
-                    name="licensing"
-                    value="cc"
-                    checked={licensing === 'cc'}
-                    onChange={() => setLicensing('cc')}
-                  />
-                  Creative Commons (Open for broader use, with attribution)
-                  <Info size={16} style={{ color: theme.subtleText }} />
-                  <span style={{ color: theme.subtleText, fontSize: '0.85rem' }}>Creative Commons licenses allow others to use your work with certain conditions. Downloads of CC content may be exportable from the app based on the specific license.</span>
+                  <input type="radio" name="licensing" value="cc" checked={licensing === 'cc'} onChange={() => setLicensing('cc')} />
+                  Creative Commons (Commercial use allowed)
                 </RadioOption>
               </RadioGroup>
             </FormGroup>
-
             {licensing === 'cc' && (
               <FormGroup>
                 <Label>Creative Commons Type:</Label>
                 <CheckboxGroup>
                   <CheckboxOption>
-                    <input
-                      type="checkbox"
-                      value="BY"
-                      checked={ccType === 'BY'}
-                      onChange={() => setCcType(ccType === 'BY' ? null : 'BY')}
-                    />
+                    <input type="checkbox" value="BY" checked={ccType === 'BY'} onChange={() => setCcType(ccType === 'BY' ? null : 'BY')} />
                     Attribution (BY)
-                    <Info size={16} style={{ color: theme.subtleText }} />
-                    <span style={{ color: theme.subtleText, fontSize: '0.85rem' }}>Allows others to distribute, remix, adapt, and build upon your work, even commercially, as long as they credit you for the original creation.</span>
                   </CheckboxOption>
-                  <CheckboxOption>
-                    <input
-                      type="checkbox"
-                      value="BY-SA"
-                      checked={ccType === 'BY-SA'}
-                      onChange={() => setCcType(ccType === 'BY-SA' ? null : 'BY-SA')}
-                    />
+                   <CheckboxOption>
+                    <input type="checkbox" value="BY-SA" checked={ccType === 'BY-SA'} onChange={() => setCcType(ccType === 'BY-SA' ? null : 'BY-SA')} />
                     Attribution-ShareAlike (BY-SA)
-                    <Info size={16} style={{ color: theme.subtleText }} />
-                    <span style={{ color: theme.subtleText, fontSize: '0.85rem' }}>Allows others to remix, adapt, and build upon your work even for commercial purposes, as long as they credit you and license their new creations under identical terms.</span>
                   </CheckboxOption>
-                  <CheckboxOption>
-                    <input
-                      type="checkbox"
-                      value="BY-NC"
-                      checked={ccType === 'BY-NC'}
-                      onChange={() => setCcType(ccType === 'BY-NC' ? null : 'BY-NC')}
-                    />
-                    Attribution-NonCommercial (BY-NC)
-                    <Info size={16} style={{ color: theme.subtleText }} />
-                    <span style={{ color: theme.subtleText, fontSize: '0.85rem' }}>Allows others to remix, adapt, and build upon your work non-commercially, and although their new works must also acknowledge you and be non-commercial, they don’t have to license their derivative works on the same terms.</span>
-                  </CheckboxOption>
-                  {/* Add more CC types as needed */}
                 </CheckboxGroup>
                 {!ccType && <p style={{ color: 'red', fontSize: '0.85rem', marginTop: '0.5rem' }}>Please select a Creative Commons type.</p>}
               </FormGroup>
             )}
-
-            {/* Collaborator Splits (Placeholder) */}
-            <FormSectionTitle>Collaborator Splits (Coming Soon)</FormSectionTitle>
-            <FormGroup>
-              <InfoMessage>
-                <Info size={18} />
-                This feature will allow you to add collaborators and define their royalty percentages.
-              </InfoMessage>
-            </FormGroup>
-
-            {/* Submit Button */}
+            
             <UploadButton type="submit" disabled={uploadStatus === 'loading'}>
               {uploadStatus === 'loading' ? (
                 <>
@@ -879,7 +794,6 @@ const UploadPage: NextPage = () => {
               )}
             </UploadButton>
 
-            {/* Status Messages */}
             {uploadStatus === 'success' && message && (
               <SuccessMessage>
                 <CheckCircle size={20} /> {message}

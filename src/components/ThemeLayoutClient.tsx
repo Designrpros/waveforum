@@ -1,3 +1,4 @@
+// src/components/ThemeLayoutClient.tsx
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -7,35 +8,39 @@ import { Footer } from './Footer';
 
 // --- Theme Definition for WaveForum ---
 const lightTheme: DefaultTheme = {
-  body: '#f0ecec', // From provided Waveform.ink light theme
-  text: '#1F2937', // From provided Waveform.ink light theme
-  subtleText: '#6B7280', // From provided Waveform.ink light theme
-  cardBg: 'rgba(255, 255, 255, 0.6)', // From provided Waveform.ink light theme
-  headerBg: 'rgba(240, 236, 236, 0.7)', // From provided Waveform.ink light theme
-  borderColor: 'rgba(0, 0, 0, 0.1)', // From provided Waveform.ink light theme
-  buttonBg: 'rgba(0, 0, 0, 0.05)', // From provided Waveform.ink light theme
-  buttonHoverBg: 'rgba(0, 0, 0, 0.1)', // From provided Waveform.ink light theme
+  body: '#f0ecec',
+  text: '#1F2937',
+  subtleText: '#6B7280',
+  cardBg: '#FFFFFF', // Changed from rgba(255, 255, 255, 0.6) to solid white
+  headerBg: '#F0ECEC', // Changed from rgba(240, 236, 236, 0.7) to solid color matching body
+  borderColor: 'rgba(0, 0, 0, 0.1)',
+  buttonBg: 'rgba(0, 0, 0, 0.05)',
+  buttonHoverBg: 'rgba(0, 0, 0, 0.1)',
   backgroundImage: 'url(/assets/MusicCircleLight.png)',
-  imageOpacity: '1.0', // From provided Waveform.ink light theme
-  accentGradient: 'linear-gradient(to right, #007bff, #0056b3)', // Blue Gradient
-  secondaryButtonBorderColor: 'rgba(0, 0, 0, 0.1)', // Matches borderColor for secondary button
-  primaryButtonTextColor: '#FFFFFF', // White text for primary buttons
+  imageOpacity: '1.0',
+  accentGradient: 'linear-gradient(to right, #007bff, #0056b3)',
+  secondaryButtonBorderColor: 'rgba(0, 0, 0, 0.1)',
+  primaryButtonTextColor: '#FFFFFF',
+  primaryBlue: '#007bff', // Assuming you've added this color as discussed
+  accentGradientHover: '#005bb5',
 };
 
 const darkTheme: DefaultTheme = {
-  body: '#383434', // From provided Waveform.ink dark theme
-  text: '#F9FAFB', // From provided Waveform.ink dark theme
-  subtleText: '#9CA3AF', // From provided Waveform.ink dark theme
-  cardBg: 'rgba(56, 52, 52, 0.6)', // From provided Waveform.ink dark theme
-  headerBg: 'rgba(56, 52, 52, 0.5)', // From provided Waveform.ink dark theme
-  borderColor: 'rgba(255, 255, 255, 0.1)', // From provided Waveform.ink dark theme
-  buttonBg: 'rgba(255, 255, 255, 0.05)', // From provided Waveform.ink dark theme
-  buttonHoverBg: 'rgba(255, 255, 255, 0.1)', // From provided Waveform.ink dark theme
+  body: '#383434',
+  text: '#F9FAFB',
+  subtleText: '#9CA3AF',
+  cardBg: '#383434', // Changed from rgba(56, 52, 52, 0.6) to solid color matching body
+  headerBg: '#383434', // Changed from rgba(56, 52, 52, 0.5) to solid color matching body
+  borderColor: 'rgba(255, 255, 255, 0.1)',
+  buttonBg: 'rgba(255, 255, 255, 0.05)',
+  buttonHoverBg: 'rgba(255, 255, 255, 0.1)',
   backgroundImage: 'url(/assets/MusicCircle.png)',
-  imageOpacity: '0.2', // From provided Waveform.ink dark theme
-  accentGradient: 'linear-gradient(to right, #007bff, #0056b3)', // Blue Gradient
-  secondaryButtonBorderColor: 'rgba(255, 255, 255, 0.1)', // Matches borderColor for secondary button
-  primaryButtonTextColor: '#FFFFFF', // White text for primary buttons
+  imageOpacity: '0.2',
+  accentGradient: 'linear-gradient(to right, #007bff, #0056b3)',
+  secondaryButtonBorderColor: 'rgba(255, 255, 255, 0.1)',
+  primaryButtonTextColor: '#FFFFFF',
+  primaryBlue: '#66b3ff', // Assuming you've added this color as discussed
+  accentGradientHover: '#0095e0',
 };
 
 // --- Global Styles ---

@@ -17,5 +17,7 @@ declare module 'styled-components' {
     accentGradient: string; // Replaced primaryColor and heroGradientText
     secondaryButtonBorderColor: string; // For explicit secondary button border
     primaryButtonTextColor: string; // Explicit text color on primary buttons
-  }
+    primaryBlue: string;  
+    accentGradientHover: string; 
+    }
 }

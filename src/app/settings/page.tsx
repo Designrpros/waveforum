@@ -1,23 +1,17 @@
+// src/app/settings/page.tsx
 "use client";
 
 import type { NextPage } from 'next';
 import Head from 'next/head';
-import React, { useState, ChangeEvent } from 'react'; // Added ChangeEvent import
+import React, { useState, ChangeEvent, useEffect } from 'react';
 import styled, { useTheme } from 'styled-components';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../../context/AuthContext';
 import {
-  User, Lock, Bell, CreditCard, Link, Shield,
-  Mail, MessageSquare, CheckSquare, Square,
-  Settings as SettingsIcon, // Renamed to avoid conflict with page name
-  Key, Globe, Cloud,
+  User, Lock, Bell, CreditCard, Shield,
 } from 'lucide-react';
 
-// --- Reused & Adapted Styled Components for Consistency ---
-const Section = styled.section`
-  padding-top: 4rem;
-  padding-bottom: 4rem;
-  position: relative;
-`;
-
+// --- (Styled Components are unchanged) ---
 const Container = styled.div`
   width: 100%;
   margin-left: auto;
@@ -48,12 +42,12 @@ const Sidebar = styled.aside`
   border: 1px solid ${({ theme }) => theme.borderColor};
   border-radius: 1rem;
   padding: 1.5rem;
-  flex-shrink: 0; /* Prevent shrinking */
+  flex-shrink: 0;
 
   @media (min-width: 1024px) {
-    width: 250px; /* Fixed width for sidebar on desktop */
+    width: 250px;
     position: sticky;
-    top: 6rem; /* Adjust based on header height */
+    top: 6rem;
   }
 `;
 
@@ -74,6 +68,7 @@ const SidebarNavLink = styled.a<{ $isActive?: boolean }>`
   font-weight: ${({ $isActive }) => ($isActive ? '600' : '500')};
   text-decoration: none;
   transition: all 0.2s ease;
+  cursor: pointer;
 
   &:hover {
     background-color: ${({ theme, $isActive }) => ($isActive ? theme.accentGradient.replace('linear-gradient(to right, ', '').split(', ')[1] : theme.buttonHoverBg)};
@@ -91,7 +86,7 @@ const SettingsSectionTitle = styled.h2`
   font-weight: 700;
   color: ${({ theme }) => theme.text};
   margin-bottom: 1.5rem;
-  margin-top: 2rem; /* Spacing between sections */
+  margin-top: 2rem;
 
   &:first-of-type {
     margin-top: 0;
@@ -192,12 +187,12 @@ const SecondaryButton = styled(Button)`
 `;
 
 const DangerButton = styled(Button)`
-  background-color: #dc3545; /* Red */
+  background-color: #dc3545;
   color: white;
   border: none;
 
   &:hover {
-    background-color: #c82333; /* Darker red */
+    background-color: #c82333;
   }
 `;
 
@@ -253,24 +248,49 @@ const InfoText = styled.p`
   margin-top: 0.5rem;
 `;
 
+
 const SettingsPage: NextPage = () => {
   const theme = useTheme();
+  const router = useRouter();
+  const { user, loading } = useAuth();
+
   const [activeSection, setActiveSection] = useState('profile');
-
-  // Placeholder states for form fields
-  const [artistName, setArtistName] = useState('Your Artist Name');
-  const [bio, setBio] = useState('Write a short bio about yourself and your music.');
-  const [socialLink, setSocialLink] = useState('');
+  
+  const [artistName, setArtistName] = useState('');
+  const [bio, setBio] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>('https://placehold.co/100x100/007bff/FFFFFF?text=Avatar');
-
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [inAppNotifications, setInAppNotifications] = useState(true);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
+    } else if (user) {
+      // Fetch the artist profile when the user is available
+      const fetchProfile = async () => {
+        try {
+          const idToken = await user.getIdToken();
+          const response = await fetch('http://51.175.105.40:8080/api/artist/profile', {
+            headers: { 'Authorization': `Bearer ${idToken}` }
+          });
+          if (!response.ok) throw new Error('Failed to fetch profile');
+          const data = await response.json();
+          setArtistName(data.name || '');
+          setBio(data.bio || '');
+          setAvatarPreviewUrl(data.artwork || null);
+        } catch (error) {
+          console.error("Could not fetch artist profile:", error);
+          // Handle case where profile might not exist yet for a new user
+        }
+      };
+      fetchProfile();
+    }
+  }, [user, loading, router]);
 
   const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -284,35 +304,70 @@ const SettingsPage: NextPage = () => {
     }
   };
 
-  const handleProfileSave = (e: React.FormEvent) => {
+  const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Profile saved:', { artistName, bio, socialLink, avatarFile });
-    // Simulate API call
-    // IMPORTANT: Do NOT use alert() in production. Use a custom modal or toast notification.
-    alert('Profile updated successfully!');
+    if (!user) {
+      alert('You must be logged in to update your profile.');
+      return;
+    }
+
+    try {
+      const idToken = await user.getIdToken();
+      const formData = new FormData();
+      formData.append('name', artistName);
+      formData.append('bio', bio);
+      if (avatarFile) {
+        formData.append('artwork', avatarFile);
+      }
+
+      const response = await fetch('http://51.175.105.40:8080/api/artist/profile', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.message || 'Failed to update profile.');
+      }
+
+      alert('Profile updated successfully!');
+
+    } catch (error: any) {
+      console.error('Profile update error:', error);
+      alert(`Error: ${error.message}`);
+    }
   };
 
   const handlePasswordChange = (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmNewPassword) {
-      // IMPORTANT: Do NOT use alert() in production. Use a custom modal or toast notification.
       alert('New passwords do not match!');
       return;
     }
-    console.log('Password change attempt:', { currentPassword, newPassword });
-    // Simulate API call
-    // IMPORTANT: Do NOT use alert() in production. Use a custom modal or toast notification.
+    console.log('Password change attempt');
     alert('Password changed successfully!');
     setCurrentPassword('');
     setNewPassword('');
     setConfirmNewPassword('');
   };
 
+  if (loading || !user) {
+    return (
+      <Container>
+        <SettingsSectionTitle>Loading...</SettingsSectionTitle>
+        <p style={{ textAlign: 'center', color: theme.subtleText }}>Checking authentication status.</p>
+      </Container>
+    );
+  }
+
   return (
     <>
       <Head>
         <title>Settings - WaveForum Artist Portal</title>
-        <meta name="description" content="Manage your WaveForum artist account settings, profile, security, and notifications." />
+        <meta name="description" content="Manage your WaveForum artist account settings." />
       </Head>
       <SettingsLayout>
         <Sidebar>
@@ -329,9 +384,6 @@ const SettingsPage: NextPage = () => {
             <SidebarNavLink href="#subscription" $isActive={activeSection === 'subscription'} onClick={() => setActiveSection('subscription')}>
               <CreditCard size={20} /> Subscription & Billing
             </SidebarNavLink>
-            <SidebarNavLink href="#integrations" $isActive={activeSection === 'integrations'} onClick={() => setActiveSection('integrations')}>
-              <Link size={20} /> Integrations
-            </SidebarNavLink>
             <SidebarNavLink href="#data-privacy" $isActive={activeSection === 'data-privacy'} onClick={() => setActiveSection('data-privacy')}>
               <Shield size={20} /> Data & Privacy
             </SidebarNavLink>
@@ -339,16 +391,15 @@ const SettingsPage: NextPage = () => {
         </Sidebar>
 
         <MainContent>
-          {/* Profile Settings */}
-          <Section id="profile">
+          <section id="profile">
             <SettingsSectionTitle>Profile Management</SettingsSectionTitle>
             <SettingsCard>
               <form onSubmit={handleProfileSave}>
                 <FormGroup>
                   <Label htmlFor="artist-avatar">Artist Avatar</Label>
-                  {avatarPreviewUrl && <AvatarPreview src={avatarPreviewUrl} alt="Artist Avatar" />}
+                  {avatarPreviewUrl ? <AvatarPreview src={avatarPreviewUrl} alt="Artist Avatar" /> : <InfoText>No avatar uploaded.</InfoText>}
                   <Input type="file" id="artist-avatar" accept="image/*" onChange={handleAvatarChange} />
-                  <InfoText>Upload a square image (min. 500x500px) for your profile.</InfoText>
+                  <InfoText>Upload a square image (min. 500x500px).</InfoText>
                 </FormGroup>
                 <FormGroup>
                   <Label htmlFor="artist-name">Artist Name</Label>
@@ -366,27 +417,15 @@ const SettingsPage: NextPage = () => {
                     id="bio"
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
-                    placeholder="Tell your audience about yourself and your music."
+                    placeholder="Tell your audience about yourself."
                   />
-                </FormGroup>
-                <FormGroup>
-                  <Label htmlFor="social-link">Primary Social Link</Label>
-                  <Input
-                    type="url"
-                    id="social-link"
-                    value={socialLink}
-                    onChange={(e) => setSocialLink(e.target.value)}
-                    placeholder="e.g., https://instagram.com/yourartistname"
-                  />
-                  <InfoText>Link to your main social media profile or website.</InfoText>
                 </FormGroup>
                 <PrimaryButton type="submit">Save Profile</PrimaryButton>
               </form>
             </SettingsCard>
-          </Section>
+          </section>
 
-          {/* Account Security */}
-          <Section id="security">
+          <section id="security">
             <SettingsSectionTitle>Account Security</SettingsSectionTitle>
             <SettingsCard>
               <form onSubmit={handlePasswordChange}>
@@ -437,10 +476,9 @@ const SettingsPage: NextPage = () => {
                 {twoFactorEnabled && <SecondaryButton type="button" style={{ marginTop: '1rem' }}>Setup 2FA</SecondaryButton>}
               </FormGroup>
             </SettingsCard>
-          </Section>
+          </section>
 
-          {/* Notifications */}
-          <Section id="notifications">
+          <section id="notifications">
             <SettingsSectionTitle>Notification Preferences</SettingsSectionTitle>
             <SettingsCard>
               <FormGroup>
@@ -467,10 +505,9 @@ const SettingsPage: NextPage = () => {
               </FormGroup>
               <PrimaryButton type="button">Save Notification Settings</PrimaryButton>
             </SettingsCard>
-          </Section>
+          </section>
 
-          {/* Subscription & Billing */}
-          <Section id="subscription">
+          <section id="subscription">
             <SettingsSectionTitle>Subscription & Billing</SettingsSectionTitle>
             <SettingsCard>
               <FormGroup>
@@ -481,7 +518,7 @@ const SettingsPage: NextPage = () => {
               <hr style={{ border: `0.5px solid ${theme.borderColor}`, margin: '1rem 0' }} />
               <FormGroup>
                 <Label>Payment Methods</Label>
-                <InfoText>No payment methods on file. Add a new payment method to upgrade your plan.</InfoText>
+                <InfoText>No payment methods on file.</InfoText>
                 <SecondaryButton type="button" style={{ marginTop: '1rem' }}>Add Payment Method</SecondaryButton>
               </FormGroup>
               <FormGroup>
@@ -490,46 +527,23 @@ const SettingsPage: NextPage = () => {
                 <SecondaryButton type="button" style={{ marginTop: '1rem' }}>View Billing History</SecondaryButton>
               </FormGroup>
             </SettingsCard>
-          </Section>
+          </section>
 
-          {/* Integrations */}
-          <Section id="integrations">
-            <SettingsSectionTitle>Integrations</SettingsSectionTitle>
-            <SettingsCard>
-              <FormGroup>
-                <Label>Spotify for Artists</Label>
-                <InfoText>Connect your Spotify for Artists account for enhanced analytics and profile management.</InfoText>
-                <SecondaryButton type="button" style={{ marginTop: '1rem' }}>Connect Spotify</SecondaryButton>
-              </FormGroup>
-              <FormGroup>
-                <Label>Apple Music for Artists</Label>
-                <InfoText>Link your Apple Music for Artists account to track performance on Apple platforms.</InfoText>
-                <SecondaryButton type="button" style={{ marginTop: '1rem' }}>Connect Apple Music</SecondaryButton>
-              </FormGroup>
-              <FormGroup>
-                <Label>Social Media Links</Label>
-                <InfoText>Manage additional social media links for your artist profile.</InfoText>
-                <SecondaryButton type="button" style={{ marginTop: '1rem' }}>Manage Social Links</SecondaryButton>
-              </FormGroup>
-            </SettingsCard>
-          </Section>
-
-          {/* Data & Privacy */}
-          <Section id="data-privacy">
+          <section id="data-privacy">
             <SettingsSectionTitle>Data & Privacy</SettingsSectionTitle>
             <SettingsCard>
               <FormGroup>
                 <Label>Export My Data</Label>
-                <InfoText>Download a copy of your WaveForum data (profile, release metadata, etc.).</InfoText>
+                <InfoText>Download a copy of your WaveForum data.</InfoText>
                 <SecondaryButton type="button" style={{ marginTop: '1rem' }}>Export Data</SecondaryButton>
               </FormGroup>
               <FormGroup>
                 <Label>Delete My Account</Label>
-                <InfoText>Permanently delete your WaveForum account and all associated data. This action cannot be undone.</InfoText>
-                <DangerButton type="button" style={{ marginTop: '1rem' }}>Delete Account</DangerButton>
+                <InfoText>Permanently delete your account. This action cannot be undone.</InfoText>
+                <DangerButton type="button" style={{ marginTop: '1.5rem' }}>Delete Account</DangerButton>
               </FormGroup>
             </SettingsCard>
-          </Section>
+          </section>
         </MainContent>
       </SettingsLayout>
     </>

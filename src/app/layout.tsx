@@ -1,8 +1,10 @@
+// src/app/layout.tsx
 import type { Metadata } from "next";
-import { Inter } from "next/font/google"; // Using Inter font for WaveForum
+import { Inter } from "next/font/google";
 import "./globals.css";
-import StyledComponentsRegistry from "./lib/registry"; // Assuming you'll create this
+import StyledComponentsRegistry from "../lib/registry";
 import { ThemeLayoutClient } from '../components/ThemeLayoutClient';
+import { AuthProvider } from '../context/AuthContext'; // Import AuthProvider
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,13 +19,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning={true}>
       <body className={inter.className}>
-        {/* StyledComponentsRegistry and ThemeLayoutClient are essential for styled-components */}
         <StyledComponentsRegistry>
-          <ThemeLayoutClient>
-            {children}
-          </ThemeLayoutClient>
+          {/* Wrap ThemeLayoutClient (or directly children) with AuthProvider */}
+          <AuthProvider> 
+            <ThemeLayoutClient>
+              {children}
+            </ThemeLayoutClient>
+          </AuthProvider>
         </StyledComponentsRegistry>
       </body>
     </html>
