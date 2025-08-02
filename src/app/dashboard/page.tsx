@@ -274,7 +274,7 @@ const DashboardPage: NextPage = () => {
     if (!user) return;
     try {
       const idToken = await user.getIdToken();
-      const response = await fetch('http://51.175.105.40:8080/api/artist/my-releases', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/artist/my-releases`, {
         headers: { 'Authorization': `Bearer ${idToken}` }
       });
       if (!response.ok) throw new Error('Failed to fetch releases');
@@ -303,7 +303,7 @@ const DashboardPage: NextPage = () => {
     if (window.confirm('Are you sure you want to delete this album? This will also delete all associated tracks and files. This action cannot be undone.')) {
       try {
         const idToken = await user.getIdToken();
-        const response = await fetch(`http://51.175.105.40:8080/api/album/${albumId}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/album/${albumId}`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${idToken}` }
         });
