@@ -581,7 +581,7 @@ const UploadPage: NextPage = () => {
     formData.append('trackTitles', JSON.stringify(trackTitles));
 
     try {
-      const response = await fetch('http://51.175.105.40:8080/api/upload', { 
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/upload`, { 
           method: 'POST',
           body: formData,
           headers: {
@@ -820,4 +820,4 @@ const UploadPage: NextPage = () => {
   );
 };
 
-export default UploadPage;
+export default UploadPage; // Trigger new build
