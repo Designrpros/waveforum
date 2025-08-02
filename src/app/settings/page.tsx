@@ -275,7 +275,8 @@ const SettingsPage: NextPage = () => {
       const fetchProfile = async () => {
         try {
           const idToken = await user.getIdToken();
-          const response = await fetch('http://51.175.105.40:8080/api/artist/profile', {
+          // CORRECTED: Use environment variable for the API URL
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/artist/profile`, {
             headers: { 'Authorization': `Bearer ${idToken}` }
           });
           if (!response.ok) throw new Error('Failed to fetch profile');
@@ -320,7 +321,8 @@ const SettingsPage: NextPage = () => {
         formData.append('artwork', avatarFile);
       }
 
-      const response = await fetch('http://51.175.105.40:8080/api/artist/profile', {
+      // CORRECTED: Use environment variable for the API URL
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/artist/profile`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${idToken}`,
