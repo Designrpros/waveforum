@@ -3,15 +3,15 @@
 
 import type { NextPage } from 'next';
 import Head from 'next/head';
-import React, { useState, ChangeEvent, useEffect } from 'react';
+import React, { useState, ChangeEvent, useEffect, useCallback } from 'react';
 import styled, { useTheme } from 'styled-components';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import {
-  User, Lock, Bell, CreditCard, Shield,
+  User, Lock, Bell, CreditCard, Shield, Loader, CheckCircle, XCircle
 } from 'lucide-react';
 
-// --- (Styled Components are unchanged) ---
+// --- Styled Components (No Changes Here) ---
 const Container = styled.div`
   width: 100%;
   margin-left: auto;
@@ -162,6 +162,11 @@ const Button = styled.button`
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 `;
 
 const PrimaryButton = styled(Button)`
@@ -248,6 +253,27 @@ const InfoText = styled.p`
   margin-top: 0.5rem;
 `;
 
+const StatusMessage = styled.div`
+  padding: 1rem;
+  border-radius: 0.5rem;
+  margin-top: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+`;
+
+const SuccessMessage = styled(StatusMessage)`
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+`;
+
+const ErrorMessage = styled(StatusMessage)`
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+`;
+
 
 const SettingsPage: NextPage = () => {
   const theme = useTheme();
@@ -256,10 +282,14 @@ const SettingsPage: NextPage = () => {
 
   const [activeSection, setActiveSection] = useState('profile');
   
+  const [displayName, setDisplayName] = useState('');
   const [artistName, setArtistName] = useState('');
-  const [bio, setBio] = useState('');
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
+  const [artistBio, setArtistBio] = useState('');
+  const [profileAvatarFile, setProfileAvatarFile] = useState<File | null>(null);
+  const [artistArtworkFile, setArtistArtworkFile] = useState<File | null>(null);
+  const [profileAvatarPreviewUrl, setProfileAvatarPreviewUrl] = useState<string | null>(null);
+  const [artistArtworkPreviewUrl, setArtistArtworkPreviewUrl] = useState<string | null>(null);
+
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -267,62 +297,94 @@ const SettingsPage: NextPage = () => {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [inAppNotifications, setInAppNotifications] = useState(true);
 
+  const [profileSaveStatus, setProfileSaveStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [profileMessage, setProfileMessage] = useState<string | null>(null);
+
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    } else if (user) {
-      // Fetch the artist profile when the user is available
-      const fetchProfile = async () => {
-        try {
-          const idToken = await user.getIdToken();
-          // CORRECTED: Use environment variable for the API URL
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/artist/profile`, {
-            headers: { 'Authorization': `Bearer ${idToken}` }
-          });
-          if (!response.ok) throw new Error('Failed to fetch profile');
-          const data = await response.json();
-          setArtistName(data.name || '');
-          setBio(data.bio || '');
-          setAvatarPreviewUrl(data.artwork || null);
-        } catch (error) {
-          console.error("Could not fetch artist profile:", error);
-          // Handle case where profile might not exist yet for a new user
+    const fetchProfile = async () => {
+      if (!user) return;
+      try {
+        const idToken = await user.getIdToken();
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/profile`, {
+          headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        if (!response.ok) throw new Error('Failed to fetch profile.');
+        const data = await response.json();
+        
+        setDisplayName(data.profile?.display_name || '');
+        setProfileAvatarPreviewUrl(data.profile?.profile_artwork || null);
+        
+        if (data.artist) {
+            setArtistName(data.artist?.artist_name || '');
+            setArtistBio(data.artist?.bio || '');
+            setArtistArtworkPreviewUrl(data.artist?.artwork || null);
         }
-      };
-      fetchProfile();
+
+      } catch (error: any) {
+        console.error("Error loading profile:", error);
+        setProfileMessage(`Error loading profile: ${error.message}`);
+        setProfileSaveStatus('error');
+      }
+    };
+
+    if (!loading && user) {
+        fetchProfile();
+    } else if (!loading && !user) {
+        router.push('/login');
     }
   }, [user, loading, router]);
 
-  const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleProfileAvatarChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setAvatarFile(file);
+      setProfileAvatarFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
-        setAvatarPreviewUrl(reader.result as string);
+        setProfileAvatarPreviewUrl(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
   };
 
+  const handleArtistArtworkChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setArtistArtworkFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setArtistArtworkPreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setProfileSaveStatus('loading');
+    setProfileMessage(null);
+
     if (!user) {
-      alert('You must be logged in to update your profile.');
+      setProfileMessage('You must be logged in to update your profile.');
+      setProfileSaveStatus('error');
       return;
     }
 
     try {
       const idToken = await user.getIdToken();
       const formData = new FormData();
-      formData.append('name', artistName);
-      formData.append('bio', bio);
-      if (avatarFile) {
-        formData.append('artwork', avatarFile);
+      formData.append('name', displayName); 
+      formData.append('artistName', artistName);
+      formData.append('bio', artistBio);
+
+      if (profileAvatarFile) {
+        formData.append('profileAvatar', profileAvatarFile);
+      }
+      if (artistArtworkFile) {
+        formData.append('artistArtwork', artistArtworkFile);
       }
 
-      // CORRECTED: Use environment variable for the API URL
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/artist/profile`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/profile`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${idToken}`,
@@ -335,32 +397,25 @@ const SettingsPage: NextPage = () => {
         throw new Error(result.message || 'Failed to update profile.');
       }
 
-      alert('Profile updated successfully!');
+      setProfileMessage('Profile updated successfully!');
+      setProfileSaveStatus('success');
 
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error('Profile update error:', error);
-      if (error instanceof Error) {
-        alert(`Error: ${error.message}`);
-      } else {
-        alert('An unknown error occurred while updating the profile.');
-      }
+      setProfileMessage(error.message || 'Failed to save changes. Please try again.');
+      setProfileSaveStatus('error');
     }
   };
 
   const handlePasswordChange = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPassword !== confirmNewPassword) {
-      alert('New passwords do not match!');
-      return;
-    }
-    console.log('Password change attempt');
-    alert('Password changed successfully!');
+    alert('Password change functionality not implemented yet.');
     setCurrentPassword('');
     setNewPassword('');
     setConfirmNewPassword('');
   };
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <Container>
         <SettingsSectionTitle>Loading...</SettingsSectionTitle>
@@ -373,13 +428,13 @@ const SettingsPage: NextPage = () => {
     <>
       <Head>
         <title>Settings - WaveForum Artist Portal</title>
-        <meta name="description" content="Manage your WaveForum artist account settings." />
+        <meta name="description" content="Manage your WaveForum account settings." />
       </Head>
       <SettingsLayout>
         <Sidebar>
           <SidebarNav>
             <SidebarNavLink href="#profile" $isActive={activeSection === 'profile'} onClick={() => setActiveSection('profile')}>
-              <User size={20} /> Profile
+              <User size={20} /> My Profile
             </SidebarNavLink>
             <SidebarNavLink href="#security" $isActive={activeSection === 'security'} onClick={() => setActiveSection('security')}>
               <Lock size={20} /> Security
@@ -398,15 +453,28 @@ const SettingsPage: NextPage = () => {
 
         <MainContent>
           <section id="profile">
-            <SettingsSectionTitle>Profile Management</SettingsSectionTitle>
+            <SettingsSectionTitle>My Profile</SettingsSectionTitle>
             <SettingsCard>
               <form onSubmit={handleProfileSave}>
                 <FormGroup>
-                  <Label htmlFor="artist-avatar">Artist Avatar</Label>
-                  {avatarPreviewUrl ? <AvatarPreview src={avatarPreviewUrl} alt="Artist Avatar" /> : <InfoText>No avatar uploaded.</InfoText>}
-                  <Input type="file" id="artist-avatar" accept="image/*" onChange={handleAvatarChange} />
+                  <Label htmlFor="display-name">Display Name</Label>
+                  <Input
+                    type="text"
+                    id="display-name"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    required
+                  />
+                  <InfoText>This is your public name visible to all users.</InfoText>
+                </FormGroup>
+                <FormGroup>
+                  <Label htmlFor="profile-avatar">Profile Avatar</Label>
+                  {profileAvatarPreviewUrl ? <AvatarPreview src={profileAvatarPreviewUrl} alt="Profile Avatar" /> : <InfoText>No avatar uploaded.</InfoText>}
+                  <Input type="file" id="profile-avatar" accept="image/*" onChange={handleProfileAvatarChange} />
                   <InfoText>Upload a square image (min. 500x500px).</InfoText>
                 </FormGroup>
+
+                <SettingsSectionTitle>Artist Persona</SettingsSectionTitle>
                 <FormGroup>
                   <Label htmlFor="artist-name">Artist Name</Label>
                   <Input
@@ -416,17 +484,38 @@ const SettingsPage: NextPage = () => {
                     onChange={(e) => setArtistName(e.target.value)}
                     required
                   />
+                  <InfoText>This is your artist name for releases.</InfoText>
                 </FormGroup>
                 <FormGroup>
-                  <Label htmlFor="bio">Bio</Label>
+                  <Label htmlFor="artist-bio">Artist Bio (Optional)</Label>
                   <Textarea
-                    id="bio"
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    placeholder="Tell your audience about yourself."
+                    id="artist-bio"
+                    value={artistBio}
+                    onChange={(e) => setArtistBio(e.target.value)}
+                    placeholder="Tell us about yourself as an artist."
                   />
                 </FormGroup>
-                <PrimaryButton type="submit">Save Profile</PrimaryButton>
+                <FormGroup>
+                  <Label htmlFor="artist-artwork">Artist Artwork</Label>
+                  {artistArtworkPreviewUrl ? <AvatarPreview src={artistArtworkPreviewUrl} alt="Artist Artwork" /> : <InfoText>No artwork uploaded.</InfoText>}
+                  <Input type="file" id="artist-artwork" accept="image/*" onChange={handleArtistArtworkChange} />
+                  <InfoText>This artwork will be associated with your releases.</InfoText>
+                </FormGroup>
+
+                <PrimaryButton type="submit" disabled={profileSaveStatus === 'loading'}>
+                  {profileSaveStatus === 'loading' ? (
+                    <Loader size={20} style={{ animation: 'spin 1s linear infinite' }} />
+                  ) : (
+                    <CheckCircle size={20} />
+                  )}
+                  Save Profile
+                </PrimaryButton>
+                {profileMessage && profileSaveStatus === 'success' && (
+                  <SuccessMessage><CheckCircle size={20} /> {profileMessage}</SuccessMessage>
+                )}
+                {profileMessage && profileSaveStatus === 'error' && (
+                  <ErrorMessage><XCircle size={20} /> {profileMessage}</ErrorMessage>
+                )}
               </form>
             </SettingsCard>
           </section>
@@ -495,7 +584,7 @@ const SettingsPage: NextPage = () => {
                     checked={emailNotifications}
                     onChange={() => setEmailNotifications(!emailNotifications)}
                   />
-                  Receive email updates on releases, earnings, and platform news.
+                  Receive email updates on system alerts, new uploads, and critical actions.
                 </CheckboxOption>
               </FormGroup>
               <FormGroup>
@@ -518,19 +607,19 @@ const SettingsPage: NextPage = () => {
             <SettingsCard>
               <FormGroup>
                 <Label>Current Plan</Label>
-                <InfoText>You are currently on the **Free** plan.</InfoText>
-                <PrimaryButton type="button" style={{ marginTop: '1rem' }}>Upgrade to Premium</PrimaryButton>
+                <InfoText>This section is typically for artist accounts.</InfoText>
+                <PrimaryButton type="button" style={{ marginTop: '1rem' }} disabled>Upgrade to Premium</PrimaryButton>
               </FormGroup>
               <hr style={{ border: `0.5px solid ${theme.borderColor}`, margin: '1rem 0' }} />
               <FormGroup>
                 <Label>Payment Methods</Label>
                 <InfoText>No payment methods on file.</InfoText>
-                <SecondaryButton type="button" style={{ marginTop: '1rem' }}>Add Payment Method</SecondaryButton>
+                <SecondaryButton type="button" style={{ marginTop: '1rem' }} disabled>Add Payment Method</SecondaryButton>
               </FormGroup>
               <FormGroup>
                 <Label>Billing History</Label>
                 <InfoText>View your past invoices and payment history.</InfoText>
-                <SecondaryButton type="button" style={{ marginTop: '1rem' }}>View Billing History</SecondaryButton>
+                <SecondaryButton type="button" style={{ marginTop: '1rem' }} disabled>View Billing History</SecondaryButton>
               </FormGroup>
             </SettingsCard>
           </section>
@@ -540,12 +629,12 @@ const SettingsPage: NextPage = () => {
             <SettingsCard>
               <FormGroup>
                 <Label>Export My Data</Label>
-                <InfoText>Download a copy of your WaveForum data.</InfoText>
+                <InfoText>Download a copy of your WaveForum Admin data (e.g., action logs).</InfoText>
                 <SecondaryButton type="button" style={{ marginTop: '1rem' }}>Export Data</SecondaryButton>
               </FormGroup>
               <FormGroup>
                 <Label>Delete My Account</Label>
-                <InfoText>Permanently delete your account. This action cannot be undone.</InfoText>
+                <InfoText>Permanently delete your admin account. This action cannot be undone.</InfoText>
                 <DangerButton type="button" style={{ marginTop: '1.5rem' }}>Delete Account</DangerButton>
               </FormGroup>
             </SettingsCard>

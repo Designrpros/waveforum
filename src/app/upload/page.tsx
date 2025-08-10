@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { genreList } from '../../data/genres';
 
-// --- Styled Components ---
+// --- Styled Components (no changes) ---
 const Section = styled.section`
   padding-top: 4rem;
   padding-bottom: 4rem;
@@ -100,6 +100,10 @@ const Input = styled.input`
     outline: none;
     border-color: ${({ theme }) => theme.accentGradient.replace('linear-gradient(to right, ', '').split(', ')[0]};
     box-shadow: 0 0 0 2px ${({ theme }) => theme.accentGradient.replace('linear-gradient(to right, ', '').split(', ')[0].replace(')', ', 0.2)')};
+  }
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
   }
 `;
 
@@ -432,12 +436,43 @@ const UploadPage: NextPage = () => {
   const [trackCounter, setTrackCounter] = useState(1);
 
   const allGenres = useMemo(() => genreList.flatMap(group => group.options), []);
+  
+  // MODIFIED: Fetched profile data now includes both profile and artist info
+  const [artistProfile, setArtistProfile] = useState<{ profile: { display_name: string }, artist: { artist_name: string } | null } | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
 
+  // MODIFIED: Fetch both profile and artist info on mount
   useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      try {
+        const idToken = await user.getIdToken();
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/artist/profile`, {
+          headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          // Populate state with data from both profile and artist tables
+          setArtistProfile(data);
+          setReleaseArtistName(data.profile?.display_name || data.artist?.artist_name || '');
+          if (data.artist) {
+            setReleaseArtistName(data.artist?.artist_name || '');
+          }
+        }
+      } catch (error) {
+        console.error("Could not fetch artist profile:", error);
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
     if (!loading && !user) {
       router.push('/login');
+    } else if (user) {
+      fetchProfile();
     }
   }, [user, loading, router]);
+
 
   useEffect(() => {
     if (genreInput) {
@@ -570,7 +605,9 @@ const UploadPage: NextPage = () => {
 
     formData.append('releaseArtistName', releaseArtistName);
     formData.append('releaseType', releaseType);
-    formData.append('albumName', albumName);
+    if (releaseType === 'album') {
+      formData.append('albumName', albumName);
+    }
     formData.append('genres', genres.join(', '));
     formData.append('releaseDate', releaseDate);
     formData.append('description', description);
@@ -596,7 +633,7 @@ const UploadPage: NextPage = () => {
       setMessage(result.message);
       
       setReleaseType('single');
-      setReleaseArtistName('');
+      setReleaseArtistName(artistProfile?.artist?.artist_name || artistProfile?.profile?.display_name || '');
       setAlbumName('');
       setGenres([]);
       setReleaseDate(new Date().toISOString().split('T')[0]);
@@ -619,11 +656,18 @@ const UploadPage: NextPage = () => {
     }
   };
 
-  if (loading || !user) {
+  if (loading || profileLoading) {
       return (
         <Container><SectionTitle>Loading...</SectionTitle></Container>
       );
   }
+
+  if (!user) {
+    return null; // The useEffect will handle redirection to login
+  }
+  
+  const artistNameFromProfile = artistProfile?.artist?.artist_name || artistProfile?.profile?.display_name || '';
+
 
   return (
     <>
@@ -643,7 +687,7 @@ const UploadPage: NextPage = () => {
             <FormGroup>
               <RadioGroup>
                 <RadioOption>
-                  <input type="radio" name="release-type" value="single" checked={releaseType === 'single'} onChange={() => setReleaseType('single')} />
+                  <input type="radio" name="release-type" value="single" checked={releaseType === 'single'} onChange={() => { setReleaseType('single'); setTracks([{ id: 'track-1', title: '', file: null }]); setTrackCounter(1); }} />
                   Single (One track release)
                 </RadioOption>
                 <RadioOption>
@@ -656,7 +700,16 @@ const UploadPage: NextPage = () => {
             <FormSectionTitle>General Release Details</FormSectionTitle>
             <FormGroup>
               <Label htmlFor="release-artist-name">Artist Name(s)</Label>
-              <Input type="text" id="release-artist-name" value={releaseArtistName} onChange={(e) => setReleaseArtistName(e.target.value)} placeholder="e.g., Aurora Bloom" required />
+              <Input
+                type="text"
+                id="release-artist-name"
+                value={releaseArtistName}
+                onChange={(e) => setReleaseArtistName(e.target.value)}
+                placeholder="e.g., Aurora Bloom"
+                required
+                disabled={!!artistProfile?.artist}
+              />
+              {artistProfile?.artist && <InfoText>Your artist name is already set in your profile and cannot be changed here.</InfoText>}
             </FormGroup>
             {releaseType === 'album' && (
               <FormGroup>
@@ -820,4 +873,4 @@ const UploadPage: NextPage = () => {
   );
 };
 
-export default UploadPage; // Trigger new build
+export default UploadPage;
