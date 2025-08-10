@@ -3,7 +3,7 @@
 
 import type { NextPage } from 'next';
 import Head from 'next/head';
-import React, { useState, ChangeEvent, useEffect, useCallback } from 'react';
+import React, { useState, ChangeEvent, useEffect } from 'react';
 import styled, { useTheme } from 'styled-components';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
@@ -320,9 +320,13 @@ const SettingsPage: NextPage = () => {
             setArtistArtworkPreviewUrl(data.artist?.artwork || null);
         }
 
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Error loading profile:", error);
-        setProfileMessage(`Error loading profile: ${error.message}`);
+        if (error instanceof Error) {
+            setProfileMessage(`Error loading profile: ${error.message}`);
+        } else {
+            setProfileMessage('An unknown error occurred while loading the profile.');
+        }
         setProfileSaveStatus('error');
       }
     };
@@ -400,9 +404,13 @@ const SettingsPage: NextPage = () => {
       setProfileMessage('Profile updated successfully!');
       setProfileSaveStatus('success');
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Profile update error:', error);
-      setProfileMessage(error.message || 'Failed to save changes. Please try again.');
+      if (error instanceof Error) {
+          setProfileMessage(error.message || 'Failed to save changes. Please try again.');
+      } else {
+          setProfileMessage('An unknown error occurred while saving the profile.');
+      }
       setProfileSaveStatus('error');
     }
   };
