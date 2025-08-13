@@ -11,7 +11,7 @@ import {
   User, Lock, Bell, CreditCard, Shield, Loader, CheckCircle, XCircle
 } from 'lucide-react';
 
-// --- Styled Components (No Changes Here) ---
+// --- Styled Components (no changes) ---
 const Container = styled.div`
   width: 100%;
   margin-left: auto;
@@ -308,6 +308,13 @@ const SettingsPage: NextPage = () => {
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/profile`, {
           headers: { 'Authorization': `Bearer ${idToken}` }
         });
+
+        if (response.status === 404) {
+          console.log("No profile found for this user. Displaying empty form.");
+          setDisplayName(user.email || ''); // Pre-fill with email for convenience
+          return;
+        }
+
         if (!response.ok) throw new Error('Failed to fetch profile.');
         const data = await response.json();
         
@@ -387,12 +394,10 @@ const SettingsPage: NextPage = () => {
       if (artistArtworkFile) {
         formData.append('artistArtwork', artistArtworkFile);
       }
-
+      
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/profile`, {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${idToken}`,
-        },
+        headers: { 'Authorization': `Bearer ${idToken}` },
         body: formData,
       });
 
@@ -408,19 +413,25 @@ const SettingsPage: NextPage = () => {
       console.error('Profile update error:', error);
       if (error instanceof Error) {
           setProfileMessage(error.message || 'Failed to save changes. Please try again.');
-      } else {
+        } else {
           setProfileMessage('An unknown error occurred while saving the profile.');
-      }
+        }
       setProfileSaveStatus('error');
     }
   };
-
+  
   const handlePasswordChange = (e: React.FormEvent) => {
     e.preventDefault();
     alert('Password change functionality not implemented yet.');
     setCurrentPassword('');
     setNewPassword('');
     setConfirmNewPassword('');
+  };
+
+  const handleDeleteAccount = (e: React.FormEvent) => {
+    e.preventDefault();
+    alert('Account deletion functionality not implemented yet.');
+    // TODO: Add implementation for account deletion logic
   };
 
   if (loading) {
@@ -492,7 +503,6 @@ const SettingsPage: NextPage = () => {
                     onChange={(e) => setArtistName(e.target.value)}
                     required
                   />
-                  <InfoText>This is your artist name for releases.</InfoText>
                 </FormGroup>
                 <FormGroup>
                   <Label htmlFor="artist-bio">Artist Bio (Optional)</Label>
@@ -635,16 +645,18 @@ const SettingsPage: NextPage = () => {
           <section id="data-privacy">
             <SettingsSectionTitle>Data & Privacy</SettingsSectionTitle>
             <SettingsCard>
-              <FormGroup>
-                <Label>Export My Data</Label>
-                <InfoText>Download a copy of your WaveForum Admin data (e.g., action logs).</InfoText>
-                <SecondaryButton type="button" style={{ marginTop: '1rem' }}>Export Data</SecondaryButton>
-              </FormGroup>
-              <FormGroup>
-                <Label>Delete My Account</Label>
-                <InfoText>Permanently delete your admin account. This action cannot be undone.</InfoText>
-                <DangerButton type="button" style={{ marginTop: '1.5rem' }}>Delete Account</DangerButton>
-              </FormGroup>
+              <form onSubmit={handleDeleteAccount}>
+                <FormGroup>
+                  <Label>Export My Data</Label>
+                  <InfoText>Download a copy of your WaveForum Admin data (e.g., action logs).</InfoText>
+                  <SecondaryButton type="button" style={{ marginTop: '1rem' }}>Export Data</SecondaryButton>
+                </FormGroup>
+                <FormGroup>
+                  <Label>Delete My Account</Label>
+                  <InfoText>Permanently delete your admin account. This action cannot be undone.</InfoText>
+                  <DangerButton type="submit" style={{ marginTop: '1.5rem' }}>Delete Account</DangerButton>
+                </FormGroup>
+              </form>
             </SettingsCard>
           </section>
         </MainContent>

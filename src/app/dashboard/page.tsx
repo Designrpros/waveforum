@@ -274,7 +274,7 @@ const DashboardPage: NextPage = () => {
     if (!user) return;
     try {
       const idToken = await user.getIdToken();
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/artist/my-releases`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/me/releases`, {
         headers: { 'Authorization': `Bearer ${idToken}` }
       });
       if (!response.ok) throw new Error('Failed to fetch releases');

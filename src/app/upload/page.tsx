@@ -1,4 +1,3 @@
-// src/app/upload/page.tsx
 "use client";
 
 import type { NextPage } from 'next';
@@ -13,13 +12,12 @@ import {
 } from 'lucide-react';
 import { genreList } from '../../data/genres';
 
-// --- Styled Components (no changes) ---
+// --- (Styled Components are unchanged) ---
 const Section = styled.section`
   padding-top: 4rem;
   padding-bottom: 4rem;
   position: relative;
 `;
-
 const Container = styled.div`
   width: 100%;
   margin-left: auto;
@@ -30,7 +28,6 @@ const Container = styled.div`
     max-width: 1024px;
   }
 `;
-
 const SectionTitle = styled.h2`
   font-size: 2.25rem;
   font-weight: 700;
@@ -41,7 +38,6 @@ const SectionTitle = styled.h2`
     font-size: 3rem;
   }
 `;
-
 const SectionSubtitle = styled.p`
   margin-top: 1rem;
   color: ${({ theme }) => theme.subtleText};
@@ -51,7 +47,6 @@ const SectionSubtitle = styled.p`
   margin-right: auto;
   margin-bottom: 3rem;
 `;
-
 const UploadForm = styled.form`
   background-color: ${({ theme }) => theme.cardBg};
   border: 1px solid ${({ theme }) => theme.borderColor};
@@ -64,7 +59,6 @@ const UploadForm = styled.form`
   margin: 0 auto;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
 `;
-
 const FormSectionTitle = styled.h3`
   font-size: 1.5rem;
   font-weight: 600;
@@ -73,11 +67,9 @@ const FormSectionTitle = styled.h3`
   border-bottom: 1px solid ${({ theme }) => theme.borderColor};
   padding-bottom: 0.5rem;
 `;
-
 const FormGroup = styled.div`
   margin-bottom: 1rem;
 `;
-
 const Label = styled.label`
   display: block;
   font-size: 0.95rem;
@@ -85,7 +77,6 @@ const Label = styled.label`
   color: ${({ theme }) => theme.text};
   margin-bottom: 0.5rem;
 `;
-
 const Input = styled.input`
   width: 100%;
   padding: 0.75rem 1rem;
@@ -95,7 +86,6 @@ const Input = styled.input`
   color: ${({ theme }) => theme.text};
   font-size: 1rem;
   transition: border-color 0.2s, box-shadow 0.2s;
-
   &:focus {
     outline: none;
     border-color: ${({ theme }) => theme.accentGradient.replace('linear-gradient(to right, ', '').split(', ')[0]};
@@ -106,7 +96,6 @@ const Input = styled.input`
     opacity: 0.7;
   }
 `;
-
 const Textarea = styled.textarea`
   width: 100%;
   padding: 0.75rem 1rem;
@@ -118,14 +107,12 @@ const Textarea = styled.textarea`
   min-height: 80px;
   resize: vertical;
   transition: border-color 0.2s, box-shadow 0.2s;
-
   &:focus {
     outline: none;
     border-color: ${({ theme }) => theme.accentGradient.replace('linear-gradient(to right, ', '').split(', ')[0]};
     box-shadow: 0 0 0 2px ${({ theme }) => theme.accentGradient.replace('linear-gradient(to right, ', '').split(', ')[0].replace(')', ', 0.2)')};
   }
 `;
-
 const FileDropArea = styled.div<{ $isDragActive: boolean }>`
   border: 2px dashed ${({ theme, $isDragActive }) => $isDragActive ? theme.accentGradient.replace('linear-gradient(to right, ', '').split(', ')[0] : theme.borderColor};
   border-radius: 1rem;
@@ -139,20 +126,16 @@ const FileDropArea = styled.div<{ $isDragActive: boolean }>`
   align-items: center;
   justify-content: center;
   gap: 1rem;
-
   &:hover {
     background-color: ${({ theme }) => theme.buttonHoverBg};
   }
 `;
-
 const FileInput = styled.input`
   display: none;
 `;
-
 const UploadIconWrapper = styled.div`
   color: ${({ theme }) => theme.subtleText};
 `;
-
 const UploadButton = styled.button`
   display: flex;
   align-items: center;
@@ -168,18 +151,15 @@ const UploadButton = styled.button`
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
   }
-
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
   }
 `;
-
 const MessageContainer = styled.div`
   padding: 1rem;
   border-radius: 0.5rem;
@@ -188,25 +168,21 @@ const MessageContainer = styled.div`
   align-items: center;
   gap: 0.75rem;
 `;
-
 const SuccessMessage = styled(MessageContainer)`
   background-color: #d4edda;
   color: #155724;
   border: 1px solid #c3e6cb;
 `;
-
 const ErrorMessage = styled(MessageContainer)`
   background-color: #f8d7da;
   color: #721c24;
   border: 1px solid #f5c6cb;
 `;
-
 const InfoMessage = styled(MessageContainer)`
   background-color: #cfe2ff;
   color: #055160;
   border: 1px solid #b6d4fe;
 `;
-
 const ArtworkPreview = styled.img`
   max-width: 150px;
   max-height: 150px;
@@ -215,13 +191,11 @@ const ArtworkPreview = styled.img`
   margin-top: 1rem;
   border: 1px solid ${({ theme }) => theme.borderColor};
 `;
-
 const RadioGroup = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 `;
-
 const RadioOption = styled.label`
   display: flex;
   align-items: center;
@@ -229,7 +203,6 @@ const RadioOption = styled.label`
   font-size: 1rem;
   color: ${({ theme }) => theme.text};
   cursor: pointer;
-
   input[type="radio"] {
     appearance: none;
     width: 1.25rem;
@@ -239,7 +212,6 @@ const RadioOption = styled.label`
     display: grid;
     place-content: center;
     transition: all 0.2s ease;
-
     &::before {
       content: "";
       width: 0.65rem;
@@ -249,7 +221,6 @@ const RadioOption = styled.label`
       transition: transform 0.2s ease;
       background-color: ${({ theme }) => theme.accentGradient.replace('linear-gradient(to right, ', '').split(', ')[0]};
     }
-
     &:checked {
       border-color: ${({ theme }) => theme.accentGradient.replace('linear-gradient(to right, ', '').split(', ')[0]};
       &::before {
@@ -258,14 +229,12 @@ const RadioOption = styled.label`
     }
   }
 `;
-
 const CheckboxGroup = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   margin-top: 0.5rem;
 `;
-
 const CheckboxOption = styled.label`
   display: flex;
   align-items: center;
@@ -273,7 +242,6 @@ const CheckboxOption = styled.label`
   font-size: 0.95rem;
   color: ${({ theme }) => theme.subtleText};
   cursor: pointer;
-
   input[type="checkbox"] {
     appearance: none;
     width: 1.1rem;
@@ -283,7 +251,6 @@ const CheckboxOption = styled.label`
     display: grid;
     place-content: center;
     transition: all 0.2s ease;
-
     &::before {
       content: "✓";
       font-size: 0.8rem;
@@ -291,7 +258,6 @@ const CheckboxOption = styled.label`
       transform: scale(0);
       transition: transform 0.2s ease;
     }
-
     &:checked {
       background-color: ${({ theme }) => theme.accentGradient.replace('linear-gradient(to right, ', '').split(', ')[0]};
       border-color: ${({ theme }) => theme.accentGradient.replace('linear-gradient(to right, ', '').split(', ')[0]};
@@ -301,7 +267,6 @@ const CheckboxOption = styled.label`
     }
   }
 `;
-
 const AddTrackButton = styled.button`
   display: flex;
   align-items: center;
@@ -315,12 +280,10 @@ const AddTrackButton = styled.button`
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-
   &:hover {
     background-color: ${({ theme }) => theme.buttonHoverBg};
   }
 `;
-
 const RemoveTrackButton = styled.button`
   background: none;
   border: none;
@@ -332,22 +295,18 @@ const RemoveTrackButton = styled.button`
   padding: 0.25rem;
   border-radius: 50%;
   transition: all 0.2s ease;
-
   &:hover {
     background-color: rgba(220, 53, 69, 0.1);
   }
 `;
-
 const InfoText = styled.p`
   font-size: 0.85rem;
   color: ${({ theme }) => theme.subtleText};
   margin-top: 0.5rem;
 `;
-
 const GenreInputWrapper = styled.div`
   position: relative;
 `;
-
 const GenreTagContainer = styled.div`
   display: flex;
   flex-wrap: wrap;
@@ -358,7 +317,6 @@ const GenreTagContainer = styled.div`
   border-radius: 0.5rem;
   min-height: 40px;
 `;
-
 const GenreTag = styled.div`
   display: flex;
   align-items: center;
@@ -368,7 +326,6 @@ const GenreTag = styled.div`
   border-radius: 9999px;
   font-size: 0.9rem;
 `;
-
 const RemoveTagButton = styled.button`
   background: none;
   border: none;
@@ -382,7 +339,6 @@ const RemoveTagButton = styled.button`
     color: ${({ theme }) => theme.text};
   }
 `;
-
 const SuggestionsList = styled.ul`
   list-style: none;
   padding: 0;
@@ -397,7 +353,6 @@ const SuggestionsList = styled.ul`
   max-height: 200px;
   overflow-y: auto;
 `;
-
 const SuggestionItem = styled.li`
   padding: 0.75rem 1rem;
   cursor: pointer;
@@ -437,27 +392,23 @@ const UploadPage: NextPage = () => {
 
   const allGenres = useMemo(() => genreList.flatMap(group => group.options), []);
   
-  // MODIFIED: Fetched profile data now includes both profile and artist info
   const [artistProfile, setArtistProfile] = useState<{ profile: { display_name: string }, artist: { artist_name: string } | null } | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
-  // MODIFIED: Fetch both profile and artist info on mount
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user) return;
       try {
         const idToken = await user.getIdToken();
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/artist/profile`, {
+        // --- THIS IS THE FIX ---
+        // Changed the URL from '/artist/profile' to '/profile'
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/profile`, {
           headers: { 'Authorization': `Bearer ${idToken}` }
         });
         if (response.ok) {
           const data = await response.json();
-          // Populate state with data from both profile and artist tables
           setArtistProfile(data);
-          setReleaseArtistName(data.profile?.display_name || data.artist?.artist_name || '');
-          if (data.artist) {
-            setReleaseArtistName(data.artist?.artist_name || '');
-          }
+          setReleaseArtistName(data.artist?.artist_name || data.profile?.display_name || '');
         }
       } catch (error) {
         console.error("Could not fetch artist profile:", error);
@@ -665,9 +616,6 @@ const UploadPage: NextPage = () => {
   if (!user) {
     return null; // The useEffect will handle redirection to login
   }
-  
-  const artistNameFromProfile = artistProfile?.artist?.artist_name || artistProfile?.profile?.display_name || '';
-
 
   return (
     <>
