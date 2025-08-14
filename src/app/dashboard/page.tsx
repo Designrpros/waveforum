@@ -271,21 +271,34 @@ const DashboardPage: NextPage = () => {
   const [expandedAlbums, setExpandedAlbums] = useState<Record<number, boolean>>({});
 
   const fetchReleases = useCallback(async () => {
-    if (!user) return;
+    console.log("DEBUG(Dashboard): Starting fetchReleases...");
+    if (!user) {
+      console.log("DEBUG(Dashboard): No user found, returning.");
+      return;
+    }
     try {
+      console.log("DEBUG(Dashboard): Attempting to get ID token.");
       const idToken = await user.getIdToken();
+      console.log("DEBUG(Dashboard): ID token retrieved. Fetching releases from API.");
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/me/releases`, {
         headers: { 'Authorization': `Bearer ${idToken}` }
       });
-      if (!response.ok) throw new Error('Failed to fetch releases');
+      console.log(`DEBUG(Dashboard): Received response with status: ${response.status}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`DEBUG(Dashboard): Server responded with an error: ${errorText}`);
+        throw new Error('Failed to fetch releases');
+      }
       const data = await response.json();
+      console.log("DEBUG(Dashboard): Successfully fetched releases:", data);
       setReleases(data);
     } catch (error) {
-      console.error(error);
+      console.error("DEBUG(Dashboard): Error in fetchReleases:", error);
     }
   }, [user]);
   
   useEffect(() => {
+    console.log(`DEBUG(Dashboard): useEffect triggered. Loading: ${loading}, User: ${!!user}`);
     if (!loading && !user) {
       router.push('/login');
     } else if (user) {
