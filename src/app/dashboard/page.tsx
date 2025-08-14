@@ -392,6 +392,7 @@ const DashboardPage: NextPage = () => {
               <AlbumItem key={release.id}>
                 <AlbumItemHeader onClick={() => toggleAlbum(release.id)}>
                   <ReleaseInfo>
+                    {/* FIX: Add conditional check for the tracks array before accessing length */}
                     {expandedAlbums[release.id] ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
                     <ReleaseArtwork src={release.artwork} alt={release.title} />
                     <ReleaseTitle>{release.title}</ReleaseTitle>
@@ -424,7 +425,8 @@ const DashboardPage: NextPage = () => {
                 )}
                 {expandedAlbums[release.id] && (
                   <TrackSubList>
-                    {release.tracks.length > 0 ? release.tracks.map(track => (
+                    {/* FIX: Add conditional check for the tracks array before mapping */}
+                    {release.tracks && release.tracks.length > 0 ? release.tracks.map(track => (
                       <TrackItem key={track.id}>
                         <Music size={14} />
                         <span>{track.title}</span>
