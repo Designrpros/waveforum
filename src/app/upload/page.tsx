@@ -1,3 +1,4 @@
+// src/app/upload/page.tsx
 "use client";
 
 import type { NextPage } from 'next';
@@ -400,8 +401,6 @@ const UploadPage: NextPage = () => {
       if (!user) return;
       try {
         const idToken = await user.getIdToken();
-        // --- THIS IS THE FIX ---
-        // Changed the URL from '/artist/profile' to '/profile'
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/profile`, {
           headers: { 'Authorization': `Bearer ${idToken}` }
         });
@@ -532,25 +531,32 @@ const UploadPage: NextPage = () => {
     setUploadStatus('loading');
     setMessage(null);
 
+    // --- Start Enhanced Debugging ---
+    console.log("DEBUG: handleSubmit triggered.");
+
     if (!artworkFile || tracks.some(t => !t.file || !t.title) || genres.length === 0) {
+      const debugMessage = `Validation failed: artworkFile=${!!artworkFile}, tracks valid=${!tracks.some(t => !t.file || !t.title)}, genres count=${genres.length}`;
+      console.error("DEBUG:", debugMessage);
       setMessage('Please ensure artwork, all track files, titles, and at least one genre are provided.');
       setUploadStatus('error');
       return;
     }
 
     if (!user) {
+      console.error("DEBUG: User is not authenticated.");
       setMessage('You must be logged in to upload music.');
       setUploadStatus('error');
       return;
     }
-    const idToken = await user.getIdToken();
 
+    const idToken = await user.getIdToken();
     const formData = new FormData();
     
     formData.append('artwork', artworkFile);
-    tracks.forEach(track => {
+    tracks.forEach((track, index) => {
       if (track.file) {
         formData.append('tracks', track.file);
+        console.log(`DEBUG: Appending track #${index + 1}:`, track.file.name);
       }
     });
 
@@ -567,6 +573,8 @@ const UploadPage: NextPage = () => {
     
     const trackTitles = tracks.map(t => t.title);
     formData.append('trackTitles', JSON.stringify(trackTitles));
+    
+    console.log("DEBUG: FormData prepared. Sending request to backend...");
 
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/upload`, { 
@@ -576,13 +584,28 @@ const UploadPage: NextPage = () => {
               'Authorization': `Bearer ${idToken}`
           }
       });
-      const result = await response.json();
+
+      // --- This is the key debugging addition ---
+      console.log(`DEBUG: Backend responded with status: ${response.status}`);
       if (!response.ok) {
-        throw new Error(result.message || 'Upload failed');
+        // We get the raw text of the response to see the actual server error
+        const errorText = await response.text();
+        console.error("DEBUG: Backend error response body:", errorText);
+        // Try to parse it as JSON, but fall back to the raw text if it fails
+        try {
+            const result = JSON.parse(errorText);
+            throw new Error(result.message || 'Upload failed due to a server error.');
+        } catch (jsonError) {
+            throw new Error(errorText || 'Upload failed due to an unknown server error.');
+        }
       }
+      
+      const result = await response.json();
+      console.log("DEBUG: Backend success response:", result);
       setUploadStatus('success');
       setMessage(result.message);
       
+      // Reset form on success
       setReleaseType('single');
       setReleaseArtistName(artistProfile?.artist?.artist_name || artistProfile?.profile?.display_name || '');
       setAlbumName('');
@@ -597,7 +620,7 @@ const UploadPage: NextPage = () => {
       setTrackCounter(1);
 
     } catch (error: unknown) {
-      console.error('Upload error:', error);
+      console.error('DEBUG: Caught an error during fetch/upload process:', error);
       setUploadStatus('error');
       if (error instanceof Error) {
         setMessage(error.message || 'Failed to upload music. Please try again.');
